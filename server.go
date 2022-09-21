@@ -60,7 +60,7 @@ type Server struct {
 	// each broadcast call will publish its own message(s) by order.
 	SyncBroadcaster bool
 	// FireDisconnectAlways will allow firing the `OnDisconnect` server's
-	// event even if the connection was immediately closed from the `OnConnect` server's event
+	// event even if the connection wasimmediately closed from the `OnConnect` server's event
 	// through `Close()` or non-nil error.
 	// See https://github.com/kataras/neffos/issues/41
 	//
