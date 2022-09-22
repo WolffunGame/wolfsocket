@@ -97,6 +97,8 @@ func (s *Socket) ReadData(timeout time.Duration) ([]byte, neffos.MessageType, er
 			}
 
 			// timeout: maximum wait time allowed to read a message from the connection.
+			//10-3 = 7 > 2
+
 			if timeout-MinPingTime < s.idleTime {
 				delayTime = MinPingTime
 			}
