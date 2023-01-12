@@ -4,3 +4,7 @@ _authortools
 /_examples/**/node_modules
 .directory
 *.exe
+
+vendor
+
+_examples/*/go*

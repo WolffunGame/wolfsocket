@@ -36,7 +36,7 @@ type Config struct {
 type StackExchange struct {
 	channel string
 
-	pool     *radix.Pool
+	pool     radix.Client
 	connFunc radix.ConnFunc
 
 	subscribers map[*wolfsocket.Conn]*subscriber
@@ -101,14 +101,20 @@ func NewStackExchange(cfg Config, channel string) (*StackExchange, error) {
 	}
 
 	var connFunc radix.ConnFunc
+	var client radix.Client
 
 	if len(cfg.Clusters) > 0 {
-		cluster, err := radix.NewCluster(cfg.Clusters)
+		cluster, err := radix.NewCluster(cfg.Clusters, radix.ClusterPoolFunc(func(network, addr string) (radix.Client, error) {
+			return radix.NewPool(network, addr, cfg.MaxActive, radix.PoolConnFunc(func(network, addr string) (radix.Conn, error) {
+				return radix.Dial(network, addr, radix.DialAuthPass(cfg.Password))
+			}))
+		}))
 		if err != nil {
 			// maybe an
 			// ERR This instance has cluster support disabled
 			return nil, err
 		}
+		client = cluster
 
 		connFunc = func(network, addr string) (radix.Conn, error) {
 			topo := cluster.Topo()
@@ -119,15 +125,16 @@ func NewStackExchange(cfg Config, channel string) (*StackExchange, error) {
 		connFunc = func(network, addr string) (radix.Conn, error) {
 			return radix.Dial(cfg.Network, cfg.Addr, dialOptions...)
 		}
-	}
+		pool, err := radix.NewPool("", "", cfg.MaxActive, radix.PoolConnFunc(connFunc))
+		if err != nil {
+			return nil, err
+		}
 
-	pool, err := radix.NewPool("", "", cfg.MaxActive, radix.PoolConnFunc(connFunc))
-	if err != nil {
-		return nil, err
+		client = pool
 	}
 
 	exc := &StackExchange{
-		pool:     pool,
+		pool:     client,
 		connFunc: connFunc,
 		// If you are using one redis server for multiple wolfsocket servers,
 		// use a different channel for each wolfsocket server.

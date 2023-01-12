@@ -3,12 +3,12 @@ module github.com/WolffunGame/wolfsocket
 go 1.18
 
 require (
+	github.com/RussellLuo/timingwheel v0.0.0-20220218152713-54845bda3108
 	github.com/gobwas/ws v1.1.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/iris-contrib/go.uuid v2.0.0+incompatible
 	github.com/mediocregopher/radix/v3 v3.8.1
 	github.com/nats-io/nats.go v1.16.0
-	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 )
 
 require (
