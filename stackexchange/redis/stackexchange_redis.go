@@ -161,20 +161,20 @@ func (exc *StackExchange) run() {
 		case s := <-exc.addSubscriber:
 			exc.subscribers[s.conn] = s
 			// wolfsocket.Debugf("[%s] added to potential subscribers", s.conn.ID())
-		case m := <-exc.subscribe:
-			if sub, ok := exc.subscribers[m.conn]; ok {
-				channel := exc.getChannel(m.namespace, "", "")
-				sub.pubSub.PSubscribe(sub.msgCh, channel)
-				// wolfsocket.Debugf("[%s] subscribed to [%s] for namespace [%s]", m.conn.ID(), channel, m.namespace)
-				//	} else {
-				// wolfsocket.Debugf("[%s] tried to subscribe to [%s] namespace before 'OnConnect.addSubscriber'!", m.conn.ID(), m.namespace)
-			}
-		case m := <-exc.unsubscribe:
-			if sub, ok := exc.subscribers[m.conn]; ok {
-				channel := exc.getChannel(m.namespace, "", "")
-				// wolfsocket.Debugf("[%s] unsubscribed from [%s]", channel)
-				sub.pubSub.PUnsubscribe(sub.msgCh, channel)
-			}
+		case _ = <-exc.subscribe:
+			//if sub, ok := exc.subscribers[m.conn]; ok {
+			//	channel := exc.getChannel(m.namespace, "", "")
+			//	sub.pubSub.PSubscribe(sub.msgCh, channel)
+			//	// wolfsocket.Debugf("[%s] subscribed to [%s] for namespace [%s]", m.conn.ID(), channel, m.namespace)
+			//	//	} else {
+			//	// wolfsocket.Debugf("[%s] tried to subscribe to [%s] namespace before 'OnConnect.addSubscriber'!", m.conn.ID(), m.namespace)
+			//}
+		case _ = <-exc.unsubscribe:
+			//if sub, ok := exc.subscribers[m.conn]; ok {
+			//	channel := exc.getChannel(m.namespace, "", "")
+			//	// wolfsocket.Debugf("[%s] unsubscribed from [%s]", channel)
+			//	sub.pubSub.PUnsubscribe(sub.msgCh, channel)
+			//}
 		case m := <-exc.delSubscriber:
 			if sub, ok := exc.subscribers[m.conn]; ok {
 				// wolfsocket.Debugf("[%s] disconnected", m.conn.ID())
@@ -193,12 +193,14 @@ func (exc *StackExchange) getChannel(namespace, room, connID string) string {
 		return exc.channel + "." + connID + "."
 	}
 
-	if namespace == "" && room != "" {
-		// should never happen but give info for debugging.
-		panic("namespace cannot be empty when sending to a namespace's room")
-	}
-
-	return exc.channel + "." + namespace + "."
+	panic("connID cannot be empty")
+	
+	//@Tinh comment, khong dung room
+	//if namespace == "" && room != "" {
+	//	//should never happen but give info for debugging.
+	//	panic("namespace cannot be empty when sending to a namespace's room")
+	//}
+	//return exc.channel + "." + namespace + "."
 }
 
 // OnConnect prepares the connection redis subscriber

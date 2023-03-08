@@ -701,15 +701,17 @@ func (c *Conn) notifyNamespaceConnected(ns *NSConn, connectMsg Message) {
 	connectMsg.Event = OnNamespaceConnected
 	ns.events.fireEvent(ns, connectMsg) // omit error, it's connected.
 
-	if !c.IsClient() && c.server.usesStackExchange() {
-		c.server.StackExchange.Subscribe(c, ns.namespace)
-	}
+	//Tinh comment, khong dung nua
+	//if !c.IsClient() && c.server.usesStackExchange() {
+	//	c.server.StackExchange.Subscribe(c, ns.namespace)
+	//}
 }
 
 func (c *Conn) notifyNamespaceDisconnect(ns *NSConn, disconnectMsg Message) {
-	if !c.IsClient() && c.server.usesStackExchange() {
-		c.server.StackExchange.Unsubscribe(c, disconnectMsg.Namespace)
-	}
+	//Tinh comment, khong dung nua
+	//if !c.IsClient() && c.server.usesStackExchange() {
+	//	c.server.StackExchange.Unsubscribe(c, disconnectMsg.Namespace)
+	//}
 }
 
 // DisconnectAll method disconnects from all namespaces,
