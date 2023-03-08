@@ -1047,3 +1047,19 @@ func (c *Conn) IsClosed() bool {
 func (c *Conn) GetServerConnID() string {
 	return c.serverConnID
 }
+
+// GetConnectedNamespaceNames returns the names of all currently connected namespaces.
+func (c *Conn) GetConnectedNamespaceNames() []string {
+	c.connectedNamespacesMutex.RLock()
+	defer c.connectedNamespacesMutex.RUnlock()
+
+	namespaceNames := make([]string, 0, len(c.connectedNamespaces))
+
+	for namespace, conn := range c.connectedNamespaces {
+		if conn != nil {
+			namespaceNames = append(namespaceNames, namespace)
+		}
+	}
+
+	return namespaceNames
+}
