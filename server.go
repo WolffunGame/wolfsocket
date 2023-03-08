@@ -76,6 +76,9 @@ type Server struct {
 
 	count uint64
 
+	//like connections,used in case need to find Conn by connID
+	connsByID         map[string]*Conn
+	find              chan findAction
 	connections       map[*Conn]struct{}
 	connect           chan *Conn
 	disconnect        chan *Conn
@@ -171,11 +174,13 @@ func (s *Server) start() {
 		select {
 		case c := <-s.connect:
 			s.connections[c] = struct{}{}
+			s.connsByID[c.serverConnID] = c
 			atomic.AddUint64(&s.count, 1)
 		case c := <-s.disconnect:
 			if _, ok := s.connections[c]; ok {
 				// close(c.out)
 				delete(s.connections, c)
+				delete(s.connsByID, c.serverConnID)
 				atomic.AddUint64(&s.count, ^uint64(0))
 				// println("disconnect...")
 				if s.OnDisconnect != nil {
@@ -189,6 +194,7 @@ func (s *Server) start() {
 				if s.usesStackExchange() {
 					s.StackExchange.OnDisconnect(c)
 				}
+
 			}
 		case msgs := <-s.broadcastMessages:
 			for c := range s.connections {
@@ -201,6 +207,12 @@ func (s *Server) start() {
 
 			if act.done != nil {
 				act.done <- struct{}{}
+			}
+		case fi := <-s.find:
+			for _, sID := range fi.serverIDs {
+				if conn, exists := s.connsByID[sID]; exists {
+					fi.call(conn)
+				}
 			}
 		}
 	}
@@ -414,6 +426,11 @@ type action struct {
 	done chan struct{}
 }
 
+type findAction struct {
+	serverIDs []string
+	call      func(*Conn)
+}
+
 // Do loops through all connected connections and fires the "fn", with this method
 // callers can do whatever they want on a connection outside of a event's callback,
 // but make sure that these operations are not taking long time to complete because it delays the
@@ -431,6 +448,19 @@ func (s *Server) Do(fn func(*Conn), async bool) {
 	if !async {
 		<-act.done
 	}
+}
+
+// FindAndDo find Conn by ServerConnID, if connection exist, fires "fn"
+func (s *Server) FindAndFire(fn func(*Conn), serverConnID ...string) {
+	if len(serverConnID) == 0 {
+		return
+	}
+
+	findAct := findAction{
+		call:      fn,
+		serverIDs: serverConnID,
+	}
+	s.find <- findAct
 }
 
 func publishMessages(c *Conn, msgs []Message) bool {
@@ -477,8 +507,9 @@ func (s stringerValue) String() string { return s.v }
 //
 // Example Code:
 // nsConn.Conn.Server().Broadcast(
-//	neffos.Exclude("connection_id_here"),
-//  neffos.Message{Namespace: "default", Room: "roomName or empty", Event: "chat", Body: [...]})
+//
+//		neffos.Exclude("connection_id_here"),
+//	 neffos.Message{Namespace: "default", Room: "roomName or empty", Event: "chat", Body: [...]})
 func Exclude(connID string) fmt.Stringer { return stringerValue{connID} }
 
 // Broadcast method is fast and does not block any new incoming connection by-default,
