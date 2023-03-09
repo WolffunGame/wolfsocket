@@ -74,6 +74,7 @@ var _ wolfsocket.StackExchange = (*StackExchange)(nil)
 // NewStackExchange returns a new redis StackExchange.
 // The "channel" input argument is the channel prefix for publish and subscribe.
 func NewStackExchange(cfg Config, channel string) (*StackExchange, error) {
+
 	if cfg.Network == "" {
 		cfg.Network = "tcp"
 	}
@@ -194,7 +195,7 @@ func (exc *StackExchange) getChannel(namespace, room, connID string) string {
 	}
 
 	panic("connID cannot be empty")
-	
+
 	//@Tinh comment, khong dung room
 	//if namespace == "" && room != "" {
 	//	//should never happen but give info for debugging.
@@ -211,7 +212,6 @@ func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
 	redisMsgCh := make(chan radix.PubSubMessage)
 	go func() {
 		for redisMsg := range redisMsgCh {
-			// wolfsocket.Debugf("[%s] send to client: [%s]", c.ID(), string(redisMsg.Message))
 			msg := c.DeserializeMessage(wolfsocket.BinaryMessage, redisMsg.Message)
 			msg.FromStackExchange = true
 

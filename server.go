@@ -454,7 +454,7 @@ func (s *Server) Do(fn func(*Conn), async bool) {
 // If the connection is found, it calls the function 'fn' with the connection as its argument.
 // This function is asynchronous and non-blocking. It submits a findAction object to the server's 'find' channel and returns immediately.
 // The actual search and function call are performed by the server's background goroutine.
-func (s *Server) FindAndFire(fn func(*Conn), serverConnID ...string) {
+func (s *Server) FindAndFire(fn func(*Conn), serverConnID []string) {
 	if len(serverConnID) == 0 {
 		return
 	}
@@ -526,8 +526,9 @@ func Exclude(connID string) fmt.Stringer { return stringerValue{connID} }
 //
 // Example Code:
 // nsConn.Conn.Server().Broadcast(
-//	nsConn OR nil,
-//  neffos.Message{Namespace: "default", Room: "roomName or empty", Event: "chat", Body: [...]})
+//
+//		nsConn OR nil,
+//	 neffos.Message{Namespace: "default", Room: "roomName or empty", Event: "chat", Body: [...]})
 //
 // Note that it if `StackExchange` is nil then its default behavior
 // doesn't wait for a publish to complete to all clients before any

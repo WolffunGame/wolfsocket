@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+option go_package = "/protos";
+
+message RedisMessage {
+  string namespace = 1;
+  string from = 2;
+  repeated string  to = 3;
+  bytes body = 4;
+}
