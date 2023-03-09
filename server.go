@@ -578,6 +578,11 @@ func (s *Server) BroadcastServer(msgs ...protos.ServerMessage) error {
 }
 
 func (s *Server) AskServer(msg protos.ServerMessage) (*protos.ReplyMessage, error) {
+	//You cannot ask client in this case or ask more than 1 conn
+	if msg.ToClient || len(msg.To) != 1 {
+		return nil, ErrInvalidPayload
+	}
+
 	msg.Token = uuid.Must(uuid.NewV4()).String()
 	return s.StackExchange.AskServer(msg)
 }

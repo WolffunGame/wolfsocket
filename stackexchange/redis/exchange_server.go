@@ -110,9 +110,14 @@ func (es *ExchangeServer) handleMessage(payload []byte, event wolfsocket.Events)
 					Event:        redisMessage.EventName,
 					FromExplicit: redisMessage.From,
 					Body:         redisMessage.Body,
-					Token:        redisMessage.Token,
-					IsServer:     true,
 				}
+				if redisMessage.ToClient {
+					conn.Write(msg)
+					return
+				}
+				//FireEvent and Reply to this message if this is a "ask"
+				msg.Token = redisMessage.Token
+				msg.IsServer = true
 				errEvent := event.FireEvent(nsconn, msg)
 				es.Reply(errEvent, redisMessage.Token)
 
