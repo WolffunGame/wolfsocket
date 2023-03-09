@@ -106,10 +106,12 @@ func (es *ExchangeServer) handleMessage(payload []byte, event wolfsocket.Events)
 			//try get nsconn
 			if nsconn := conn.Namespace(redisMessage.Namespace); nsconn != nil {
 				msg := wolfsocket.Message{
+					Namespace:    redisMessage.Namespace,
+					Event:        redisMessage.EventName,
 					FromExplicit: redisMessage.From,
 					Body:         redisMessage.Body,
-					IsServer:     true,
 					Token:        redisMessage.Token,
+					IsServer:     true,
 				}
 				if err := event.FireEvent(nsconn, msg); err != nil {
 					if msg, b := isReplyServer(err); b {
