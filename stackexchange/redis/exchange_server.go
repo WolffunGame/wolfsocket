@@ -50,12 +50,6 @@ func NewEventServer(redisClient *redis.Client, server *wolfsocket.Server, events
 	return eventServer
 }
 
-func (es *EventServer) Init(redisClient *redis.Client, neffosServer *wolfsocket.Server) {
-	es.redisClient = redisClient
-	es.neffosServer = neffosServer
-	es.done = make(chan bool)
-}
-
 func (es *EventServer) Close() {
 	es.done <- true
 }
