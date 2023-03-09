@@ -573,18 +573,18 @@ func (s *Server) Broadcast(exceptSender fmt.Stringer, msgs ...Message) {
 	s.broadcaster.broadcast(msgs)
 }
 
-func (s *Server) BroadcastServer(msgs ...protos.ServerMessage) error {
-	return s.StackExchange.PublishServer(msgs)
+func (s *Server) BroadcastServer(namespace string, msgs ...protos.ServerMessage) error {
+	return s.StackExchange.PublishServer(namespace, msgs)
 }
 
-func (s *Server) AskServer(msg protos.ServerMessage) (*protos.ReplyMessage, error) {
+func (s *Server) AskServer(namespace string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
 	//You cannot ask client in this case or ask more than 1 conn
 	if msg.ToClient || len(msg.To) != 1 {
 		return nil, ErrInvalidPayload
 	}
 
 	msg.Token = uuid.Must(uuid.NewV4()).String()
-	return s.StackExchange.AskServer(msg)
+	return s.StackExchange.AskServer(namespace, msg)
 }
 
 // Ask is like `Broadcast` but it blocks until a response

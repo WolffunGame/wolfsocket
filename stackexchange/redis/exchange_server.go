@@ -75,7 +75,7 @@ func (es *ExchangeServer) run(namespaces wolfsocket.Namespaces) {
 				continue
 			}
 			if event, ok := namespaces[namespace]; ok {
-				es.handleMessage([]byte(msg.Payload), event)
+				es.handleMessage(namespace, []byte(msg.Payload), event)
 			}
 		case <-es.done:
 			// Unsubscribe from channels and close connection
@@ -89,7 +89,7 @@ func (es *ExchangeServer) run(namespaces wolfsocket.Namespaces) {
 	}
 }
 
-func (es *ExchangeServer) handleMessage(payload []byte, event wolfsocket.Events) error {
+func (es *ExchangeServer) handleMessage(namespace string, payload []byte, event wolfsocket.Events) error {
 	redisMessage := protos.ServerMessage{}
 	err := proto.Unmarshal(payload, &redisMessage)
 	if err != nil {
@@ -102,36 +102,33 @@ func (es *ExchangeServer) handleMessage(payload []byte, event wolfsocket.Events)
 	}
 
 	es.neffosServer.FindAndFire(func(conn *wolfsocket.Conn) {
-		if len(redisMessage.Namespace) != 0 {
-			//try get nsconn
-			if nsconn := conn.Namespace(redisMessage.Namespace); nsconn != nil {
-				msg := wolfsocket.Message{
-					Namespace:    redisMessage.Namespace,
-					Event:        redisMessage.EventName,
-					FromExplicit: redisMessage.From,
-					Body:         redisMessage.Body,
-				}
-				if redisMessage.ToClient {
-					conn.Write(msg)
-					return
-				}
-				//FireEvent and Reply to this message if this is a "ask"
-				msg.Token = redisMessage.Token
-				msg.IsServer = true
-				errEvent := event.FireEvent(nsconn, msg)
-				es.Reply(errEvent, redisMessage.Token)
-
+		//try get nsconn
+		if nsconn := conn.Namespace(namespace); nsconn != nil {
+			msg := wolfsocket.Message{
+				Namespace:    namespace,
+				Event:        redisMessage.EventName,
+				FromExplicit: redisMessage.From,
+				Body:         redisMessage.Body,
 			}
-			return
+			if redisMessage.ToClient {
+				conn.Write(msg)
+				return
+			}
+			//FireEvent and Reply to this message if this is a "ask"
+			msg.Token = redisMessage.Token
+			msg.IsServer = true
+			errEvent := event.FireEvent(nsconn, msg)
+			es.Reply(errEvent, redisMessage.Token)
+
 		}
 	}, receivers)
 
 	return nil
 }
 
-func (es *ExchangeServer) PublishServer(msgs []protos.ServerMessage) error {
+func (es *ExchangeServer) PublishServer(namespace string, msgs []protos.ServerMessage) error {
 	for _, msg := range msgs {
-		if err := es.publish(&msg); err != nil {
+		if err := es.publish(namespace, &msg); err != nil {
 			return err
 		}
 	}
@@ -139,8 +136,8 @@ func (es *ExchangeServer) PublishServer(msgs []protos.ServerMessage) error {
 }
 
 // Broadcast to neffosServer
-func (es *ExchangeServer) publish(msg *protos.ServerMessage) error {
-	if msg == nil || msg.Namespace == "" {
+func (es *ExchangeServer) publish(namespace string, msg *protos.ServerMessage) error {
+	if msg == nil || namespace == "" {
 		return ErrNamespaceEmpty
 	}
 
@@ -149,12 +146,12 @@ func (es *ExchangeServer) publish(msg *protos.ServerMessage) error {
 		return err
 	}
 
-	channel := es.getChannel(msg.Namespace)
+	channel := es.getChannel(namespace)
 	return es.redisClient.Publish(context.Background(), channel, data).Err()
 }
 
-func (es *ExchangeServer) AskServer(msg protos.ServerMessage) (response *protos.ReplyMessage, err error) {
-	if len(msg.Token) == 0 {
+func (es *ExchangeServer) AskServer(namespace string, msg protos.ServerMessage) (response *protos.ReplyMessage, err error) {
+	if msg.Token == "" || namespace == "" {
 		err = wolfsocket.ErrInvalidPayload
 		return
 	}
@@ -166,7 +163,7 @@ func (es *ExchangeServer) AskServer(msg protos.ServerMessage) (response *protos.
 		return
 	}
 	defer sub.Close()
-	if err = es.publish(&msg); err != nil {
+	if err = es.publish(namespace, &msg); err != nil {
 		return
 	}
 
