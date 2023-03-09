@@ -140,7 +140,7 @@ func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
 	}()
 	selfChannel := exc.getChannel("", "", c.ID())
 	pubSub := exc.client.Subscribe(nil)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	ctx, cancel := exc.newCtx()
 	defer cancel()
 
 	//Subscribe
