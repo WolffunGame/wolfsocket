@@ -9,7 +9,7 @@ import (
 
 // Config is used on the `StackExchange` package-level function.
 // Can be used to customize the redis client dialer.
-type Config = *redis.UniversalOptions
+type Config = redis.UniversalOptions
 type Client = redis.UniversalClient
 
 // StackExchange is a `wolfsocket.StackExchange` for redis.
@@ -55,7 +55,7 @@ var _ wolfsocket.StackExchange = (*StackExchange)(nil)
 // NewStackExchange returns a new redis StackExchange.
 // The "channel" input argument is the channel prefix for publish and subscribe.
 func NewStackExchange(cfg Config, channel string) (*StackExchange, error) {
-	rdb := redis.NewUniversalClient(cfg)
+	rdb := redis.NewUniversalClient(&cfg)
 	exc := &StackExchange{
 		client:         rdb,
 		ExchangeServer: newEventServer(rdb),
