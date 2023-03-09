@@ -165,7 +165,7 @@ func (es *exchangeServer) AskServer(msg protos.RedisMessage) (response *protos.R
 	sub := es.redisClient.Subscribe(nil)
 	ctx, cancel := es.ctx()
 	defer cancel()
-	err = sub.Subscribe(ctx, msg.Token)
+	err = sub.Subscribe(ctx, es.getChannel(msg.Token))
 	if err != nil {
 		return
 	}
