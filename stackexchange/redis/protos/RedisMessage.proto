@@ -2,7 +2,7 @@ syntax = "proto3";
 //protoc --proto_path= --go_out=stackexchange/redis/. stackexchange/redis/protos/*.proto
 option go_package = "/protos";
 
-message RedisMessage {
+message ServerMessage {
   string namespace = 1;
   string eventName = 2;
   string from = 3;

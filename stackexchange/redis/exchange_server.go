@@ -90,7 +90,7 @@ func (es *ExchangeServer) run(namespaces wolfsocket.Namespaces) {
 }
 
 func (es *ExchangeServer) handleMessage(payload []byte, event wolfsocket.Events) error {
-	redisMessage := protos.RedisMessage{}
+	redisMessage := protos.ServerMessage{}
 	err := proto.Unmarshal(payload, &redisMessage)
 	if err != nil {
 		return err
@@ -124,7 +124,7 @@ func (es *ExchangeServer) handleMessage(payload []byte, event wolfsocket.Events)
 	return nil
 }
 
-func (es *ExchangeServer) PublishServer(msgs []protos.RedisMessage) error {
+func (es *ExchangeServer) PublishServer(msgs []protos.ServerMessage) error {
 	for _, msg := range msgs {
 		if err := es.publish(&msg); err != nil {
 			return err
@@ -134,7 +134,7 @@ func (es *ExchangeServer) PublishServer(msgs []protos.RedisMessage) error {
 }
 
 // Broadcast to neffosServer
-func (es *ExchangeServer) publish(msg *protos.RedisMessage) error {
+func (es *ExchangeServer) publish(msg *protos.ServerMessage) error {
 	if msg == nil || msg.Namespace == "" {
 		return ErrNamespaceEmpty
 	}
@@ -148,7 +148,7 @@ func (es *ExchangeServer) publish(msg *protos.RedisMessage) error {
 	return es.redisClient.Publish(context.Background(), channel, data).Err()
 }
 
-func (es *ExchangeServer) AskServer(msg protos.RedisMessage) (response *protos.ReplyMessage, err error) {
+func (es *ExchangeServer) AskServer(msg protos.ServerMessage) (response *protos.ReplyMessage, err error) {
 	if len(msg.Token) == 0 {
 		err = wolfsocket.ErrInvalidPayload
 		return

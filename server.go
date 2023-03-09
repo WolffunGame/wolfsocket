@@ -573,11 +573,11 @@ func (s *Server) Broadcast(exceptSender fmt.Stringer, msgs ...Message) {
 	s.broadcaster.broadcast(msgs)
 }
 
-func (s *Server) BroadcastServer(msgs ...protos.RedisMessage) error {
+func (s *Server) BroadcastServer(msgs ...protos.ServerMessage) error {
 	return s.StackExchange.PublishServer(msgs)
 }
 
-func (s *Server) AskServer(msg protos.RedisMessage) (*protos.RedisMessage, error) {
+func (s *Server) AskServer(msg protos.ServerMessage) (*protos.ReplyMessage, error) {
 	msg.Token = uuid.Must(uuid.NewV4()).String()
 	return s.StackExchange.AskServer(msg)
 }

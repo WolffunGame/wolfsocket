@@ -43,9 +43,9 @@ type StackExchange interface {
 
 	// PublishServer should publish messages through a stackexchange.
 	// It's called automatically on neffos broadcasting when toClient equal false.
-	PublishServer(msgs []protos.RedisMessage) error
+	PublishServer(msgs []protos.ServerMessage) error
 
-	AskServer(msg protos.RedisMessage) (*protos.RedisMessage, error)
+	AskServer(msg protos.ServerMessage) (*protos.ReplyMessage, error)
 }
 
 // StackExchangeInitializer is an optional interface for a `StackExchange`.

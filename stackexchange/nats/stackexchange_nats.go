@@ -379,12 +379,12 @@ func (exc *StackExchange) OnDisconnect(c *wolfsocket.Conn) {
 	exc.delSubscriber <- closeAction{conn: c}
 }
 
-func (exc *StackExchange) PublishServer(msgs []protos.RedisMessage) error {
+func (exc *StackExchange) PublishServer(msgs []protos.ServerMessage) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (exc *StackExchange) AskServer(msg protos.RedisMessage) (*protos.RedisMessage, error) {
+func (exc *StackExchange) AskServer(msg protos.ServerMessage) (*protos.ReplyMessage, error) {
 	//TODO implement me
 	panic("implement me")
 }
