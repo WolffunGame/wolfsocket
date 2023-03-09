@@ -2,42 +2,23 @@ package redis
 
 import (
 	"context"
-	"math/rand"
-	"time"
-
 	"github.com/WolffunGame/wolfsocket"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/mediocregopher/radix/v3"
 )
 
 // Config is used on the `StackExchange` package-level function.
 // Can be used to customize the redis client dialer.
-type Config struct {
-	// Network to use.
-	// Defaults to "tcp".
-	Network string
-	// Addr of a single redis server instance.
-	// See "Clusters" field for clusters support.
-	// Defaults to "127.0.0.1:6379".
-	Addr string
-	// Clusters a list of network addresses for clusters.
-	// If not empty "Addr" is ignored.
-	Clusters []string
-
-	Password    string
-	DialTimeout time.Duration
-
-	// MaxActive defines the size connection pool.
-	// Defaults to 10.
-	MaxActive int
-}
+type Config = *redis.UniversalOptions
+type Client = redis.UniversalClient
 
 // StackExchange is a `wolfsocket.StackExchange` for redis.
 type StackExchange struct {
 	channel string
 
-	pool     radix.Client
-	connFunc radix.ConnFunc
+	client Client
+	//connFunc radix.ConnFunc
 
 	subscribers map[*wolfsocket.Conn]*subscriber
 
@@ -74,69 +55,10 @@ var _ wolfsocket.StackExchange = (*StackExchange)(nil)
 // NewStackExchange returns a new redis StackExchange.
 // The "channel" input argument is the channel prefix for publish and subscribe.
 func NewStackExchange(cfg Config, channel string) (*StackExchange, error) {
-
-	if cfg.Network == "" {
-		cfg.Network = "tcp"
-	}
-
-	if cfg.Addr == "" && len(cfg.Clusters) == 0 {
-		cfg.Addr = "127.0.0.1:6379"
-	}
-
-	if cfg.DialTimeout < 0 {
-		cfg.DialTimeout = 30 * time.Second
-	}
-
-	if cfg.MaxActive == 0 {
-		cfg.MaxActive = 10
-	}
-
-	var dialOptions []radix.DialOpt
-
-	if cfg.Password != "" {
-		dialOptions = append(dialOptions, radix.DialAuthPass(cfg.Password))
-	}
-
-	if cfg.DialTimeout > 0 {
-		dialOptions = append(dialOptions, radix.DialTimeout(cfg.DialTimeout))
-	}
-
-	var connFunc radix.ConnFunc
-	var client radix.Client
-
-	if len(cfg.Clusters) > 0 {
-		cluster, err := radix.NewCluster(cfg.Clusters, radix.ClusterPoolFunc(func(network, addr string) (radix.Client, error) {
-			return radix.NewPool(network, addr, cfg.MaxActive, radix.PoolConnFunc(func(network, addr string) (radix.Conn, error) {
-				return radix.Dial(network, addr, radix.DialAuthPass(cfg.Password))
-			}))
-		}))
-		if err != nil {
-			// maybe an
-			// ERR This instance has cluster support disabled
-			return nil, err
-		}
-		client = cluster
-
-		connFunc = func(network, addr string) (radix.Conn, error) {
-			topo := cluster.Topo()
-			node := topo[rand.Intn(len(topo))]
-			return radix.Dial(cfg.Network, node.Addr, dialOptions...)
-		}
-	} else {
-		connFunc = func(network, addr string) (radix.Conn, error) {
-			return radix.Dial(cfg.Network, cfg.Addr, dialOptions...)
-		}
-		pool, err := radix.NewPool("", "", cfg.MaxActive, radix.PoolConnFunc(connFunc))
-		if err != nil {
-			return nil, err
-		}
-
-		client = pool
-	}
+	rdb := redis.NewUniversalClient(cfg)
 
 	exc := &StackExchange{
-		pool:     client,
-		connFunc: connFunc,
+		client: rdb,
 		// If you are using one redis server for multiple wolfsocket servers,
 		// use a different channel for each wolfsocket server.
 		// Otherwise a message sent from one server to all of its own clients will go
@@ -227,6 +149,10 @@ func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
 	}
 	selfChannel := exc.getChannel("", "", c.ID())
 	pubSub.PSubscribe(redisMsgCh, selfChannel)
+
+	sub := exc.client.Subscribe(context.Background(), selfChannel)
+	msg, _ := sub.ReceiveMessage()
+	msg.Payload
 
 	exc.addSubscriber <- s
 
