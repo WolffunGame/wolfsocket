@@ -58,7 +58,7 @@ func NewStackExchange(cfg Config, channel string) (*StackExchange, error) {
 	rdb := redis.NewUniversalClient(&cfg)
 	exc := &StackExchange{
 		client:         rdb,
-		ExchangeServer: newEventServer(rdb),
+		ExchangeServer: *newEventServer(rdb),
 		// If you are using one redis server for multiple wolfsocket servers,
 		// use a different channel for each wolfsocket server.
 		// Otherwise a message sent from one server to all of its own clients will go

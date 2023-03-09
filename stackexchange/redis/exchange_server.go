@@ -15,14 +15,8 @@ var (
 	ErrNamespaceEmpty = errors.New("We do not accept messages with empty namespaces")
 )
 
-type ExchangeServer interface {
-	PublishServer(msgs []protos.RedisMessage) error
-	AskServer(msg protos.RedisMessage) (*protos.RedisMessage, error)
-	Close()
-}
-
 // This struct wraps the Redis and Neffos functionality
-type exchangeServer struct {
+type ExchangeServer struct {
 	redisClient  Client
 	neffosServer *wolfsocket.Server
 	done         chan bool
@@ -36,24 +30,24 @@ var (
 	prefixChannel = "WSServer."
 )
 
-func newEventServer(redisClient Client) *exchangeServer {
-	eventServer := &exchangeServer{
+func newEventServer(redisClient Client) *ExchangeServer {
+	eventServer := &ExchangeServer{
 		redisClient: redisClient,
 		done:        make(chan bool),
 	}
 	return eventServer
 }
 
-func (es *exchangeServer) UseExchangeServer(server *wolfsocket.Server, namespaces wolfsocket.Namespaces) {
+func (es *ExchangeServer) UseExchangeServer(server *wolfsocket.Server, namespaces wolfsocket.Namespaces) {
 	es.neffosServer = server
 	go es.run(namespaces)
 }
 
-func (es *exchangeServer) Close() {
+func (es *ExchangeServer) Close() {
 	es.done <- true
 }
 
-func (es *exchangeServer) run(namespaces wolfsocket.Namespaces) {
+func (es *ExchangeServer) run(namespaces wolfsocket.Namespaces) {
 	pubsub := es.redisClient.Subscribe(nil)
 	// Subscribe to channels corresponding to events
 	//each namespace execute 5second
@@ -95,7 +89,7 @@ func (es *exchangeServer) run(namespaces wolfsocket.Namespaces) {
 	}
 }
 
-func (es *exchangeServer) handleMessage(payload []byte, event wolfsocket.Events) error {
+func (es *ExchangeServer) handleMessage(payload []byte, event wolfsocket.Events) error {
 	redisMessage := protos.RedisMessage{}
 	err := proto.Unmarshal(payload, &redisMessage)
 	if err != nil {
@@ -133,7 +127,7 @@ func (es *exchangeServer) handleMessage(payload []byte, event wolfsocket.Events)
 	return nil
 }
 
-func (es *exchangeServer) PublishServer(msgs []protos.RedisMessage) error {
+func (es *ExchangeServer) PublishServer(msgs []protos.RedisMessage) error {
 	for _, msg := range msgs {
 		if err := es.publish(&msg); err != nil {
 			return err
@@ -143,7 +137,7 @@ func (es *exchangeServer) PublishServer(msgs []protos.RedisMessage) error {
 }
 
 // Broadcast to neffosServer
-func (es *exchangeServer) publish(msg *protos.RedisMessage) error {
+func (es *ExchangeServer) publish(msg *protos.RedisMessage) error {
 	if msg == nil || msg.Namespace == "" {
 		return ErrNamespaceEmpty
 	}
@@ -157,7 +151,7 @@ func (es *exchangeServer) publish(msg *protos.RedisMessage) error {
 	return es.redisClient.Publish(context.Background(), channel, data).Err()
 }
 
-func (es *exchangeServer) AskServer(msg protos.RedisMessage) (response *protos.RedisMessage, err error) {
+func (es *ExchangeServer) AskServer(msg protos.RedisMessage) (response *protos.RedisMessage, err error) {
 	if len(msg.Token) == 0 {
 		err = wolfsocket.ErrInvalidPayload
 		return
@@ -186,22 +180,22 @@ func (es *exchangeServer) AskServer(msg protos.RedisMessage) (response *protos.R
 	return
 }
 
-func (es *exchangeServer) getChannel(namespace string) string {
+func (es *ExchangeServer) getChannel(namespace string) string {
 	return prefixChannel + namespace
 }
 
-func (es *exchangeServer) getNameSpace(namespace string) (string, error) {
+func (es *ExchangeServer) getNameSpace(namespace string) (string, error) {
 	if !strings.HasPrefix(namespace, prefixChannel) {
 		return "", InvalidPrefix
 	}
 	return strings.TrimPrefix(namespace, prefixChannel), nil
 }
 
-func (es *exchangeServer) ctx() (context.Context, context.CancelFunc) {
+func (es *ExchangeServer) ctx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 5*time.Second)
 }
 
-func (es *exchangeServer) Reply(msg *protos.RedisMessage) {
+func (es *ExchangeServer) Reply(msg *protos.RedisMessage) {
 	if len(msg.Token) == 0 {
 		return
 	}
