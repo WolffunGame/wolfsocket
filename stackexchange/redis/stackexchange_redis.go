@@ -4,8 +4,7 @@ import (
 	"context"
 	"github.com/WolffunGame/wolfsocket"
 	"github.com/redis/go-redis/v9"
-
-	"github.com/mediocregopher/radix/v3"
+	"time"
 )
 
 // Config is used on the `StackExchange` package-level function.
@@ -31,8 +30,8 @@ type StackExchange struct {
 type (
 	subscriber struct {
 		conn   *wolfsocket.Conn
-		pubSub radix.PubSubConn
-		msgCh  chan<- radix.PubSubMessage
+		pubSub *redis.PubSub
+		msgCh  chan<- *redis.Message
 	}
 
 	subscribeAction struct {
@@ -131,28 +130,31 @@ func (exc *StackExchange) getChannel(namespace, room, connID string) string {
 // It's called automatically after the wolfsocket server's OnConnect (if any)
 // on incoming client connections.
 func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
-	redisMsgCh := make(chan radix.PubSubMessage)
+	redisMsgCh := make(chan *redis.Message)
 	go func() {
 		for redisMsg := range redisMsgCh {
-			msg := c.DeserializeMessage(wolfsocket.BinaryMessage, redisMsg.Message)
+			msg := c.DeserializeMessage(wolfsocket.BinaryMessage, []byte(redisMsg.Payload))
 			msg.FromStackExchange = true
-
 			c.Write(msg)
 		}
 	}()
+	selfChannel := exc.getChannel("", "", c.ID())
+	pubSub := exc.client.Subscribe(nil)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancel()
 
-	pubSub := radix.PersistentPubSub("", "", exc.connFunc)
+	//Subscribe
+	err := pubSub.Subscribe(ctx, selfChannel)
+	if err != nil {
+		pubSub.Close()
+		close(redisMsgCh)
+		return err
+	}
 	s := &subscriber{
 		conn:   c,
 		pubSub: pubSub,
 		msgCh:  redisMsgCh,
 	}
-	selfChannel := exc.getChannel("", "", c.ID())
-	pubSub.PSubscribe(redisMsgCh, selfChannel)
-
-	sub := exc.client.Subscribe(context.Background(), selfChannel)
-	msg, _ := sub.ReceiveMessage()
-	msg.Payload
 
 	exc.addSubscriber <- s
 
@@ -181,15 +183,16 @@ func (exc *StackExchange) publish(msg wolfsocket.Message) bool {
 }
 
 func (exc *StackExchange) publishCommand(channel string, b []byte) error {
-	cmd := radix.FlatCmd(nil, "PUBLISH", channel, b)
-	return exc.pool.Do(cmd)
+	//cmd := radix.FlatCmd(nil, "PUBLISH", channel, b)
+	ctx, cancel := exc.newCtx()
+	defer cancel()
+	return exc.client.Publish(ctx, channel, b).Err()
 }
 
 // Ask implements the server Ask feature for redis. It blocks until response.
 func (exc *StackExchange) Ask(ctx context.Context, msg wolfsocket.Message, token string) (response wolfsocket.Message, err error) {
-	sub := radix.PersistentPubSub("", "", exc.connFunc)
-	msgCh := make(chan radix.PubSubMessage)
-	err = sub.Subscribe(msgCh, token)
+	sub := exc.client.Subscribe(nil)
+	err = sub.Subscribe(ctx, token)
 	if err != nil {
 		return
 	}
@@ -202,8 +205,8 @@ func (exc *StackExchange) Ask(ctx context.Context, msg wolfsocket.Message, token
 	select {
 	case <-ctx.Done():
 		err = ctx.Err()
-	case redisMsg := <-msgCh:
-		response = wolfsocket.DeserializeMessage(wolfsocket.TextMessage, redisMsg.Message, false, false)
+	case redisMsg := <-sub.Channel():
+		response = wolfsocket.DeserializeMessage(wolfsocket.TextMessage, []byte(redisMsg.Payload), false, false)
 		err = response.Err
 	}
 
@@ -242,4 +245,8 @@ func (exc *StackExchange) Unsubscribe(c *wolfsocket.Conn, namespace string) {
 // manually by server or client or by network failure.
 func (exc *StackExchange) OnDisconnect(c *wolfsocket.Conn) {
 	exc.delSubscriber <- closeAction{conn: c}
+}
+
+func (exc *StackExchange) newCtx() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 2*time.Second)
 }
