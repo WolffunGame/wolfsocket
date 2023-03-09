@@ -152,11 +152,11 @@ func (s *Server) UseStackExchange(exc StackExchange) error {
 		return err
 	}
 
-	if s.usesStackExchange() {
-		s.StackExchange = wrapStackExchanges(s.StackExchange, exc)
-	} else {
-		s.StackExchange = exc
-	}
+	//if s.usesStackExchange() {
+	//	s.StackExchange = wrapStackExchanges(s.StackExchange, exc)
+	//} else {
+	s.StackExchange = exc
+	//}
 
 	return nil
 }
