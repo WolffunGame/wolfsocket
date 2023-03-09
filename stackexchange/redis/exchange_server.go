@@ -113,13 +113,8 @@ func (es *ExchangeServer) handleMessage(payload []byte, event wolfsocket.Events)
 					Token:        redisMessage.Token,
 					IsServer:     true,
 				}
-				if err := event.FireEvent(nsconn, msg); err != nil {
-					if msg, b := isReplyServer(err); b {
-						es.Reply(msg)
-					}
-
-					//log?
-				}
+				errEvent := event.FireEvent(nsconn, msg)
+				es.Reply(errEvent, redisMessage.Token)
 
 			}
 			return
@@ -197,33 +192,49 @@ func (es *ExchangeServer) ctx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 5*time.Second)
 }
 
-func (es *ExchangeServer) Reply(msg *protos.RedisMessage) {
-	if len(msg.Token) == 0 {
+func (es *ExchangeServer) Reply(err error, token string) {
+	if token == "" {
 		return
 	}
-	msg.Namespace = msg.Token
-	msg.Token = ""
-	es.publish(msg)
+	msg := isReplyServer(err)
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		return
+	}
+
+	channel := es.getChannel(token)
+	es.redisClient.Publish(context.Background(), channel, data)
 }
 
 type replyServer struct {
-	msg protos.RedisMessage
+	msg protos.ReplyMessage
 }
 
 func (r replyServer) Error() string {
 	return ""
 }
 
-func isReplyServer(err error) (*protos.RedisMessage, bool) {
+type errCode interface {
+	ErrorCode() uint32
+}
+
+func isReplyServer(err error) *protos.ReplyMessage {
 	if err != nil {
 		if r, ok := err.(replyServer); ok {
-			return &r.msg, true
+			return &r.msg
 		}
 	}
-	return nil, false
+	return &protos.ReplyMessage{Data: &protos.ReplyMessage_ErrorCode{ErrorCode: getErrCode(err)}}
+}
+
+func getErrCode(err error) uint32 {
+	if e, ok := err.(errCode); ok {
+		return e.ErrorCode()
+	}
+	return 99
 }
 
 // reply ask server
-func ReplyServer(msg protos.RedisMessage) error {
+func ReplyServer(msg protos.ReplyMessage) error {
 	return replyServer{msg}
 }

@@ -578,7 +578,7 @@ func (s *Server) BroadcastServer(msgs ...protos.RedisMessage) error {
 }
 
 func (s *Server) AskServer(msg protos.RedisMessage) (*protos.RedisMessage, error) {
-
+	msg.Token = uuid.Must(uuid.NewV4()).String()
 	return s.StackExchange.AskServer(msg)
 }
 
