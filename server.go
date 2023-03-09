@@ -128,6 +128,7 @@ func New(upgrader Upgrader, connHandler ConnHandler) *Server {
 		connect:           make(chan *Conn, 1),
 		disconnect:        make(chan *Conn),
 		actions:           make(chan action),
+		find:              make(chan findAction),
 		broadcastMessages: make(chan []Message),
 		broadcaster:       newBroadcaster(),
 		waitingMessages:   make(map[string]chan Message),
