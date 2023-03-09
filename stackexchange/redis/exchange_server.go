@@ -5,26 +5,25 @@ import (
 	"errors"
 	"github.com/WolffunGame/wolfsocket"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
-	"github.com/go-redis/redis/v8"
 	"google.golang.org/protobuf/proto"
 	"log"
 	"strings"
+	"time"
 )
 
 var (
 	ErrNamespaceEmpty = errors.New("We do not accept messages with empty namespaces")
 )
 
-var exchangeServer ExchangeServer
-
 type ExchangeServer interface {
-	Broadcast(eventName string, msg *protos.RedisMessage) error
-	//Ask(ctx context.Context, msg *protos.RedisMessage)  error
+	PublishServer(msgs []protos.RedisMessage) error
+	AskServer(msg protos.RedisMessage) (*protos.RedisMessage, error)
+	Close()
 }
 
 // This struct wraps the Redis and Neffos functionality
-type EventServer struct {
-	redisClient  *redis.Client
+type exchangeServer struct {
+	redisClient  Client
 	neffosServer *wolfsocket.Server
 	done         chan bool
 }
@@ -37,30 +36,34 @@ var (
 	prefixChannel = "WSServer:"
 )
 
-func NewEventServer(redisClient *redis.Client, server *wolfsocket.Server, events map[string]wolfsocket.MessageHandlerFunc) *EventServer {
-	eventServer := &EventServer{
-		redisClient:  redisClient,
-		neffosServer: server,
-		done:         make(chan bool),
+func newEventServer(redisClient Client) *exchangeServer {
+	eventServer := &exchangeServer{
+		redisClient: redisClient,
+		done:        make(chan bool),
 	}
-
-	exchangeServer = eventServer
-	//subri
-	go eventServer.Run(events)
 	return eventServer
 }
 
-func (es *EventServer) Close() {
+func (es *exchangeServer) UseExchangeServer(server *wolfsocket.Server, namespaces wolfsocket.Namespaces) {
+	es.neffosServer = server
+	go es.run(namespaces)
+}
+
+func (es *exchangeServer) Close() {
 	es.done <- true
 }
 
-func (es *EventServer) Run(events map[string]wolfsocket.MessageHandlerFunc) {
-	pubsub := es.redisClient.Subscribe(context.Background())
+func (es *exchangeServer) run(namespaces wolfsocket.Namespaces) {
+	pubsub := es.redisClient.Subscribe(nil)
 	// Subscribe to channels corresponding to events
-	for eventName := range events {
-		err := pubsub.Subscribe(context.Background(), es.getChannel(eventName))
+	//each namespace execute 5second
+	timeout := time.Duration(len(namespaces) * 5)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
+	defer cancel()
+	for namespace := range namespaces {
+		err := pubsub.Subscribe(ctx, es.getChannel(namespace))
 		if err != nil {
-			log.Fatalf("Error subscribing to channel %s: %s", eventName, err)
+			log.Fatalf("Error subscribing to channel %s: %s", namespace, err)
 		}
 	}
 
@@ -72,20 +75,18 @@ func (es *EventServer) Run(events map[string]wolfsocket.MessageHandlerFunc) {
 		select {
 		case msg := <-ch:
 			// Handle the message
-			eventName, err := es.getEventName(msg.Channel)
+			namespace, err := es.getNameSpace(msg.Channel)
 			if err != nil {
 				//skip- log
 				continue
 			}
-			eventHandler, ok := events[eventName]
-
-			if ok {
-				es.handleMessage([]byte(msg.Payload), eventHandler)
+			if event, ok := namespaces[namespace]; ok {
+				es.handleMessage([]byte(msg.Payload), event)
 			}
 		case <-es.done:
 			// Unsubscribe from channels and close connection
-			for eventName := range events {
-				pubsub.Unsubscribe(context.Background(), es.getChannel(eventName))
+			for namespace := range namespaces {
+				pubsub.Unsubscribe(context.Background(), es.getChannel(namespace))
 			}
 			pubsub.Close()
 			es.redisClient.Close()
@@ -94,7 +95,7 @@ func (es *EventServer) Run(events map[string]wolfsocket.MessageHandlerFunc) {
 	}
 }
 
-func (r *EventServer) handleMessage(payload []byte, eventHandler wolfsocket.MessageHandlerFunc) error {
+func (es *exchangeServer) handleMessage(payload []byte, event wolfsocket.Events) error {
 	redisMessage := protos.RedisMessage{}
 	err := proto.Unmarshal(payload, &redisMessage)
 	if err != nil {
@@ -106,11 +107,24 @@ func (r *EventServer) handleMessage(payload []byte, eventHandler wolfsocket.Mess
 		return nil
 	}
 
-	r.neffosServer.FindAndFire(func(conn *wolfsocket.Conn) {
+	es.neffosServer.FindAndFire(func(conn *wolfsocket.Conn) {
 		if len(redisMessage.Namespace) != 0 {
 			//try get nsconn
 			if nsconn := conn.Namespace(redisMessage.Namespace); nsconn != nil {
-				eventHandler(nsconn, wolfsocket.Message{Body: redisMessage.Body})
+				msg := wolfsocket.Message{
+					FromExplicit: redisMessage.From,
+					Body:         redisMessage.Body,
+					IsServer:     true,
+					Token:        redisMessage.Token,
+				}
+				if err := event.FireEvent(nsconn, msg); err != nil {
+					if msg, b := isReplyServer(err); b {
+						es.Reply(msg)
+					}
+
+					//log?
+				}
+
 			}
 			return
 		}
@@ -119,8 +133,17 @@ func (r *EventServer) handleMessage(payload []byte, eventHandler wolfsocket.Mess
 	return nil
 }
 
+func (es *exchangeServer) PublishServer(msgs []protos.RedisMessage) error {
+	for _, msg := range msgs {
+		if err := es.publish(&msg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Broadcast to neffosServer
-func (r *EventServer) Broadcast(eventName string, msg *protos.RedisMessage) error {
+func (es *exchangeServer) publish(msg *protos.RedisMessage) error {
 	if msg == nil || msg.Namespace == "" {
 		return ErrNamespaceEmpty
 	}
@@ -130,41 +153,81 @@ func (r *EventServer) Broadcast(eventName string, msg *protos.RedisMessage) erro
 		return err
 	}
 
-	channel := r.getChannel(eventName)
-	return r.redisClient.Publish(context.Background(), channel, data).Err()
+	channel := es.getChannel(msg.Namespace)
+	return es.redisClient.Publish(context.Background(), channel, data).Err()
 }
 
-// Ask some neffosServer??
-func Ask(ctx context.Context, connID string, serverConnUUID string) (err error) {
-	//sub := radix.PersistentPubSub("", "", exc.connFunc)
-	//msgCh := make(chan radix.PubSubMessage)
-	//err = sub.Subscribe(msgCh, token)
-	//if err != nil {
-	//	return
-	//}
-	//defer sub.Close()
-	//
-	//if !exc.publish(msg) {
-	//	return response, wolfsocket.ErrWrite
-	//}
-	//
-	//select {
-	//case <-ctx.Done():
-	//	err = ctx.Err()
-	//case redisMsg := <-msgCh:
-	//	response = wolfsocket.DeserializeMessage(wolfsocket.TextMessage, redisMsg.Message, false, false)
-	//	err = response.Err
-	//}
+func (es *exchangeServer) AskServer(msg protos.RedisMessage) (response *protos.RedisMessage, err error) {
+	if len(msg.Token) == 0 {
+		err = wolfsocket.ErrInvalidPayload
+		return
+	}
+	sub := es.redisClient.Subscribe(nil)
+	ctx, cancel := es.ctx()
+	defer cancel()
+	err = sub.Subscribe(ctx, msg.Token)
+	if err != nil {
+		return
+	}
+	defer sub.Close()
+	if err = es.publish(&msg); err != nil {
+		return
+	}
+
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	case redisMsg := <-sub.Channel():
+		response = &protos.RedisMessage{}
+		err = proto.Unmarshal([]byte(redisMsg.Payload), response)
+		return
+	}
+
 	return
 }
 
-func (r *EventServer) getChannel(eventName string) string {
-	return prefixChannel + eventName
+func (es *exchangeServer) getChannel(namespace string) string {
+	return prefixChannel + namespace
 }
 
-func (r *EventServer) getEventName(channel string) (string, error) {
-	if !strings.HasPrefix(channel, prefixChannel) {
+func (es *exchangeServer) getNameSpace(namespace string) (string, error) {
+	if !strings.HasPrefix(namespace, prefixChannel) {
 		return "", InvalidPrefix
 	}
-	return strings.TrimPrefix(channel, prefixChannel), nil
+	return strings.TrimPrefix(namespace, prefixChannel), nil
+}
+
+func (es *exchangeServer) ctx() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 5*time.Second)
+}
+
+func (es *exchangeServer) Reply(msg *protos.RedisMessage) {
+	if len(msg.Token) == 0 {
+		return
+	}
+	msg.Namespace = msg.Token
+	msg.Token = ""
+	es.publish(msg)
+}
+
+type replyServer struct {
+	msg protos.RedisMessage
+}
+
+func (r replyServer) Error() string {
+	return ""
+}
+
+func isReplyServer(err error) (*protos.RedisMessage, bool) {
+	if err != nil {
+		if r, ok := err.(replyServer); ok {
+			return &r.msg, true
+		}
+	}
+	return nil, false
+}
+
+// reply ask server
+func ReplyServer(msg protos.RedisMessage) error {
+	return replyServer{msg}
 }

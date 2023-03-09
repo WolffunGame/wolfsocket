@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"net/http"
 	"strconv"
 	"strings"
@@ -568,6 +569,15 @@ func (s *Server) Broadcast(exceptSender fmt.Stringer, msgs ...Message) {
 	}
 
 	s.broadcaster.broadcast(msgs)
+}
+
+func (s *Server) BroadcastServer(msgs ...protos.RedisMessage) error {
+	return s.StackExchange.PublishServer(msgs)
+}
+
+func (s *Server) AskServer(msg protos.RedisMessage) (*protos.RedisMessage, error) {
+
+	return s.StackExchange.AskServer(msg)
 }
 
 // Ask is like `Broadcast` but it blocks until a response

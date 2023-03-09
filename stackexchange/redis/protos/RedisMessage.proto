@@ -1,5 +1,5 @@
 syntax = "proto3";
-
+//protoc --proto_path= --go_out=stackexchange/redis/. stackexchange/redis/protos/*.proto
 option go_package = "/protos";
 
 message RedisMessage {
@@ -7,4 +7,5 @@ message RedisMessage {
   string from = 2;
   repeated string  to = 3;
   bytes body = 4;
+  string token = 5;
 }

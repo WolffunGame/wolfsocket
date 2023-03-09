@@ -2,6 +2,7 @@ package nats
 
 import (
 	"context"
+	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"strings"
 	"sync"
 
@@ -376,4 +377,14 @@ func (exc *StackExchange) Unsubscribe(c *wolfsocket.Conn, namespace string) {
 // manually by server or client or by network failure.
 func (exc *StackExchange) OnDisconnect(c *wolfsocket.Conn) {
 	exc.delSubscriber <- closeAction{conn: c}
+}
+
+func (exc *StackExchange) PublishServer(msgs []protos.RedisMessage) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (exc *StackExchange) AskServer(msg protos.RedisMessage) (*protos.RedisMessage, error) {
+	//TODO implement me
+	panic("implement me")
 }

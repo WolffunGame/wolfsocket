@@ -41,9 +41,11 @@ type StackExchange interface {
 	// specific message, "token" is the neffos wait signal for this message.
 	NotifyAsk(msg Message, token string) error
 
-	// Publish should publish messages through a stackexchange.
-	// It's called automatically on neffos broadcasting with toClient equal false.
-	PublishServer(msgs []protos.RedisMessage) bool
+	// PublishServer should publish messages through a stackexchange.
+	// It's called automatically on neffos broadcasting when toClient equal false.
+	PublishServer(msgs []protos.RedisMessage) error
+
+	AskServer(msg protos.RedisMessage) (*protos.RedisMessage, error)
 }
 
 // StackExchangeInitializer is an optional interface for a `StackExchange`.

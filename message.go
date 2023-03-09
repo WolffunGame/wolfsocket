@@ -98,6 +98,12 @@ type Message struct {
 
 	// if server or client should write using Binary message or if the incoming message was readen as binary.
 	SetBinary bool
+
+	//This message is received from some other server
+	IsServer bool
+
+	//This token for reply message server
+	Token string
 }
 
 func (m *Message) isConnect() bool {

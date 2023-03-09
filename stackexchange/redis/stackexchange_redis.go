@@ -17,7 +17,8 @@ type StackExchange struct {
 	channel string
 
 	client Client
-	//connFunc radix.ConnFunc
+	//contain PublishServer and AskServer
+	ExchangeServer
 
 	subscribers map[*wolfsocket.Conn]*subscriber
 
@@ -55,9 +56,9 @@ var _ wolfsocket.StackExchange = (*StackExchange)(nil)
 // The "channel" input argument is the channel prefix for publish and subscribe.
 func NewStackExchange(cfg Config, channel string) (*StackExchange, error) {
 	rdb := redis.NewUniversalClient(cfg)
-
 	exc := &StackExchange{
-		client: rdb,
+		client:         rdb,
+		ExchangeServer: newEventServer(rdb),
 		// If you are using one redis server for multiple wolfsocket servers,
 		// use a different channel for each wolfsocket server.
 		// Otherwise a message sent from one server to all of its own clients will go
@@ -75,6 +76,16 @@ func NewStackExchange(cfg Config, channel string) (*StackExchange, error) {
 	go exc.run()
 
 	return exc, nil
+}
+
+func (exc *StackExchange) Close() {
+	exc.client.Close()
+	exc.ExchangeServer.Close()
+	close(exc.addSubscriber)
+	close(exc.delSubscriber)
+	close(exc.subscribe)
+	close(exc.unsubscribe)
+	//close everything
 }
 
 func (exc *StackExchange) run() {
