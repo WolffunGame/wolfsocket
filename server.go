@@ -124,6 +124,7 @@ func New(upgrader Upgrader, connHandler ConnHandler) *Server {
 		readTimeout:       readTimeout,
 		writeTimeout:      writeTimeout,
 		connections:       make(map[*Conn]struct{}),
+		connsByID:         make(map[string]*Conn),
 		connect:           make(chan *Conn, 1),
 		disconnect:        make(chan *Conn),
 		actions:           make(chan action),
