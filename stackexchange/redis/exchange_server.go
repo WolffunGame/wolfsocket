@@ -33,7 +33,7 @@ type exchangeServer struct {
 // The message is not executed to prevent unauthorized access or incorrect behavior.
 var (
 	InvalidPrefix = errors.New("message received with invalid prefix")
-	prefixChannel = "WSServer:"
+	prefixChannel = "WSServer."
 )
 
 func newEventServer(redisClient Client) *exchangeServer {

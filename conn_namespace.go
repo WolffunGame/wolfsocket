@@ -311,3 +311,8 @@ func (ns *NSConn) replyRoomLeave(msg Message) {
 
 	ns.Conn.writeEmptyReply(msg.wait)
 }
+
+// Namespace return current namespace name
+func (ns *NSConn) Namespace() string {
+	return ns.namespace
+}
