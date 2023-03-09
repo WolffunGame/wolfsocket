@@ -450,7 +450,10 @@ func (s *Server) Do(fn func(*Conn), async bool) {
 	}
 }
 
-// FindAndDo find Conn by ServerConnID, if connection exist, fires "fn"
+// FindAndFire searches for a connection in the server's list of active connections based on the given serverConnID(s).
+// If the connection is found, it calls the function 'fn' with the connection as its argument.
+// This function is asynchronous and non-blocking. It submits a findAction object to the server's 'find' channel and returns immediately.
+// The actual search and function call are performed by the server's background goroutine.
 func (s *Server) FindAndFire(fn func(*Conn), serverConnID ...string) {
 	if len(serverConnID) == 0 {
 		return
