@@ -148,7 +148,7 @@ func (es *ExchangeServer) publish(msg *protos.RedisMessage) error {
 	return es.redisClient.Publish(context.Background(), channel, data).Err()
 }
 
-func (es *ExchangeServer) AskServer(msg protos.RedisMessage) (response *protos.RedisMessage, err error) {
+func (es *ExchangeServer) AskServer(msg protos.RedisMessage) (response *protos.ReplyMessage, err error) {
 	if len(msg.Token) == 0 {
 		err = wolfsocket.ErrInvalidPayload
 		return
@@ -169,7 +169,7 @@ func (es *ExchangeServer) AskServer(msg protos.RedisMessage) (response *protos.R
 	case <-ctx.Done():
 		err = ctx.Err()
 	case redisMsg := <-sub.Channel():
-		response = &protos.RedisMessage{}
+		response = &protos.ReplyMessage{}
 		err = proto.Unmarshal([]byte(redisMsg.Payload), response)
 		return
 	}
