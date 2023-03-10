@@ -19,7 +19,7 @@ var (
 type ExchangeServer struct {
 	redisClient  Client
 	neffosServer *wolfsocket.Server
-	done         chan bool
+	done         chan struct{}
 }
 
 // InvalidPrefix is returned when a message with a channel prefix
@@ -33,7 +33,7 @@ var (
 func newEventServer(redisClient Client) *ExchangeServer {
 	eventServer := &ExchangeServer{
 		redisClient: redisClient,
-		done:        make(chan bool),
+		done:        make(chan struct{}),
 	}
 	return eventServer
 }
@@ -44,7 +44,7 @@ func (es *ExchangeServer) UseExchangeServer(server *wolfsocket.Server, namespace
 }
 
 func (es *ExchangeServer) Close() {
-	es.done <- true
+	es.done <- struct{}{}
 }
 
 func (es *ExchangeServer) run(namespaces wolfsocket.Namespaces) {
