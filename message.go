@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+//TODO refactor message
+
 // The Message is the structure which describes the incoming and outcoming data.
 // Emitter's "body" argument is the `Message.Body` field.
 // Emitter's return non-nil error is the `Message.Err` field.
@@ -102,7 +104,7 @@ type Message struct {
 	//This message is received from some other server
 	IsServer bool
 
-	//This token for reply message server
+	//This token for reply server message
 	Token string
 }
 
