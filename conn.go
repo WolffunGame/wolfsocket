@@ -455,13 +455,13 @@ func (c *Conn) handleMessage(msg Message) error {
 	case OnNamespaceDisconnect:
 		c.replyDisconnect(msg)
 	case OnRoomJoin:
-		if ns, ok := c.tryNamespace(msg); ok {
-			ns.replyRoomJoin(msg)
-		}
+		//if ns, ok := c.tryNamespace(msg); ok {
+		//	ns.replyRoomJoin(msg)
+		//}
 	case OnRoomLeave:
-		if ns, ok := c.tryNamespace(msg); ok {
-			ns.replyRoomLeave(msg)
-		}
+		//if ns, ok := c.tryNamespace(msg); ok {
+		//	ns.replyRoomLeave(msg)
+		//}
 	default:
 		ns, ok := c.tryNamespace(msg)
 		if !ok {
@@ -758,7 +758,7 @@ func (c *Conn) askDisconnect(ctx context.Context, msg Message, lock bool) error 
 
 	// if disconnect is allowed then leave rooms first with force property
 	// before namespace's deletion.
-	ns.forceLeaveAll(true)
+	//ns.forceLeaveAll(true)
 
 	if lock {
 		c.connectedNamespacesMutex.Lock()
@@ -792,7 +792,7 @@ func (c *Conn) replyDisconnect(msg Message) {
 	if c.IsClient() {
 		// if disconnect is allowed then leave rooms first with force property
 		// before namespace's deletion.
-		ns.forceLeaveAll(false)
+		//ns.forceLeaveAll(false)
 
 		c.connectedNamespacesMutex.Lock()
 		delete(c.connectedNamespaces, msg.Namespace)
@@ -812,7 +812,7 @@ func (c *Conn) replyDisconnect(msg Message) {
 		return
 	}
 
-	ns.forceLeaveAll(false)
+	//ns.forceLeaveAll(false)
 
 	c.connectedNamespacesMutex.Lock()
 	delete(c.connectedNamespaces, msg.Namespace)
@@ -866,22 +866,22 @@ func (c *Conn) canWrite(msg Message) bool {
 			return false
 		}
 
-		if msg.Room != "" && !msg.isRoomJoin() && !msg.isRoomLeft() {
-			if !msg.locked {
-				ns.roomsMutex.RLock()
-			}
-
-			_, ok := ns.rooms[msg.Room]
-
-			if !msg.locked {
-				ns.roomsMutex.RUnlock()
-			}
-
-			if !ok {
-				// tried to send to a not joined room.
-				return false
-			}
-		}
+		//if msg.Room != "" && !msg.isRoomJoin() && !msg.isRoomLeft() {
+		//	if !msg.locked {
+		//		ns.roomsMutex.RLock()
+		//	}
+		//
+		//	_, ok := ns.rooms[msg.Room]
+		//
+		//	if !msg.locked {
+		//		ns.roomsMutex.RUnlock()
+		//	}
+		//
+		//	if !ok {
+		//		// tried to send to a not joined room.
+		//		return false
+		//	}
+		//}
 	}
 
 	// if !c.IsClient() && !msg.FromStackExchange {
@@ -1012,7 +1012,7 @@ func (c *Conn) Close() {
 			c.connectedNamespacesMutex.Lock()
 			for namespace, ns := range c.connectedNamespaces {
 				// leave rooms first with force and local property before remove the namespace completely.
-				ns.forceLeaveAll(true)
+				//ns.forceLeaveAll(true)
 
 				disconnectMsg.Namespace = ns.namespace
 				ns.events.fireEvent(ns, disconnectMsg)
