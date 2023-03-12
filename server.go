@@ -537,43 +537,44 @@ func Exclude(connID string) fmt.Stringer { return stringerValue{connID} }
 // doesn't wait for a publish to complete to all clients before any
 // next broadcast call. To change that behavior set the `Server.SyncBroadcaster` to true
 // before server start.
-func (s *Server) Broadcast(exceptSender fmt.Stringer, msgs ...Message) {
+//func (s *Server) Broadcast(exceptSender fmt.Stringer, msgs ...Message) {
+//
+//	if exceptSender != nil {
+//		var fromExplicit, from string
+//
+//		switch c := exceptSender.(type) {
+//		case *Conn:
+//			fromExplicit = c.serverConnID
+//		case *NSConn:
+//			fromExplicit = c.Conn.serverConnID
+//		default:
+//			from = exceptSender.String()
+//		}
+//
+//		for i := range msgs {
+//			if from != "" {
+//				msgs[i].from = from
+//			} else {
+//				msgs[i].FromExplicit = fromExplicit
+//			}
+//		}
+//	}
+//
+//	if s.usesStackExchange() {
+//		s.StackExchange.Publish(msgs)
+//		return
+//	}
+//
+//	if s.SyncBroadcaster {
+//		s.broadcastMessages <- msgs
+//		return
+//	}
+//
+//	s.broadcaster.broadcast(msgs)
+//}
 
-	if exceptSender != nil {
-		var fromExplicit, from string
-
-		switch c := exceptSender.(type) {
-		case *Conn:
-			fromExplicit = c.serverConnID
-		case *NSConn:
-			fromExplicit = c.Conn.serverConnID
-		default:
-			from = exceptSender.String()
-		}
-
-		for i := range msgs {
-			if from != "" {
-				msgs[i].from = from
-			} else {
-				msgs[i].FromExplicit = fromExplicit
-			}
-		}
-	}
-
-	if s.usesStackExchange() {
-		s.StackExchange.Publish(msgs)
-		return
-	}
-
-	if s.SyncBroadcaster {
-		s.broadcastMessages <- msgs
-		return
-	}
-
-	s.broadcaster.broadcast(msgs)
-}
-
-func (s *Server) BroadcastServer(namespace string, msgs ...protos.ServerMessage) error {
+// SBroadcast Broadcast server
+func (s *Server) SBroadcast(namespace string, msgs ...protos.ServerMessage) error {
 	return s.StackExchange.PublishServer(namespace, msgs)
 }
 
@@ -587,6 +588,7 @@ func (s *Server) AskServer(namespace string, msg protos.ServerMessage) (*protos.
 	return s.StackExchange.AskServer(namespace, msg)
 }
 
+// DEPRECATED:
 // Ask is like `Broadcast` but it blocks until a response
 // from a specific connection if "msg.To" is filled otherwise
 // from the first connection which will reply to this "msg".
@@ -606,24 +608,24 @@ func (s *Server) Ask(ctx context.Context, msg Message) (Message, error) {
 		msg.wait = genWaitStackExchange(msg.wait)
 		return s.StackExchange.Ask(ctx, msg, msg.wait)
 	}
-
-	ch := make(chan Message)
-	s.waitingMessagesMutex.Lock()
-	s.waitingMessages[msg.wait] = ch
-	s.waitingMessagesMutex.Unlock()
-
-	s.Broadcast(nil, msg)
-
-	select {
-	case <-ctx.Done():
-		return Message{}, ctx.Err()
-	case receive := <-ch:
-		s.waitingMessagesMutex.Lock()
-		delete(s.waitingMessages, msg.wait)
-		s.waitingMessagesMutex.Unlock()
-
-		return receive, receive.Err
-	}
+	return msg, nil
+	//ch := make(chan Message)
+	//s.waitingMessagesMutex.Lock()
+	//s.waitingMessages[msg.wait] = ch
+	//s.waitingMessagesMutex.Unlock()
+	//
+	//s.Broadcast(nil, msg)
+	//
+	//select {
+	//case <-ctx.Done():
+	//	return Message{}, ctx.Err()
+	//case receive := <-ch:
+	//	s.waitingMessagesMutex.Lock()
+	//	delete(s.waitingMessages, msg.wait)
+	//	s.waitingMessagesMutex.Unlock()
+	//
+	//	return receive, receive.Err
+	//}
 }
 
 // GetConnectionsByNamespace can be used as an alternative way to retrieve

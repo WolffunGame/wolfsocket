@@ -2,8 +2,8 @@ package wolfsocket
 
 import (
 	"context"
+	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"reflect"
-	"sync"
 )
 
 // NSConn describes a connection connected to a specific namespace,
@@ -23,7 +23,7 @@ type NSConn struct {
 	// Client can ask to join, server can forcely join a connection to a room.
 	// Namespace(room(fire event)).
 	//rooms      map[string]*Room
-	roomsMutex sync.RWMutex
+	//roomsMutex sync.RWMutex
 
 	// value is just a temporarily value.
 	// Storage across event callbacks for this namespace.
@@ -68,13 +68,29 @@ func (ns *NSConn) EmitBinary(event string, body []byte) bool {
 	return ns.Conn.Write(Message{Namespace: ns.namespace, Event: event, Body: body, SetBinary: true})
 }
 
-// Ask method writes a message to the remote side and blocks until a response or an error received.
-func (ns *NSConn) Ask(ctx context.Context, event string, body []byte) (Message, error) {
+// Conn#Remote Ask method writes a message to the remote side and blocks until a response or an error received.
+func (ns *NSConn) AskRemote(ctx context.Context, event string, body []byte) (Message, error) {
 	if ns == nil {
 		return Message{}, ErrWrite
 	}
 
 	return ns.Conn.Ask(ctx, Message{Namespace: ns.namespace, Event: event, Body: body})
+}
+
+func (nsConn *NSConn) SBroadcast(msgs ...Message) error {
+	return nsConn.server().SBroadcast(nsConn.namespace)
+}
+
+func (nsConn *NSConn) AskServer(msg protos.ServerMessage) (*protos.ReplyMessage, error) {
+	return nsConn.server().AskServer(nsConn.namespace, msg)
+}
+
+func (nsConn *NSConn) server() *Server {
+	return nsConn.Conn.Server()
+}
+
+func (nsConn *NSConn) ForceDisconnect() {
+	nsConn.Conn.Close()
 }
 
 // Disconnect method sends a disconnect signal to the remote side and fires the local `OnNamespaceDisconnect` event.
@@ -93,6 +109,225 @@ func (ns *NSConn) Disconnect(ctx context.Context) error {
 func (ns *NSConn) Namespace() string {
 	return ns.namespace
 }
+
+// PARTY
+//func (ns *NSConn) JoinParty(ctx context.Context, partyID string) (*Party, error) {
+//	if ns == nil {
+//		return nil, ErrWrite
+//	}
+//
+//	return ns.askPartyJoin(ctx, partyID)
+//}
+//
+//// Room method returns a joined `Room`.
+//func (ns *NSConn) Room(roomName string) *Room {
+//	if ns == nil {
+//		return nil
+//	}
+//
+//	ns.roomsMutex.RLock()
+//	room := ns.rooms[roomName]
+//	ns.roomsMutex.RUnlock()
+//
+//	return room
+//}
+//
+//// Rooms returns a slice copy of the joined rooms.
+//func (ns *NSConn) Rooms() []*Room {
+//	ns.roomsMutex.RLock()
+//	rooms := make([]*Room, len(ns.rooms))
+//	i := 0
+//	for _, room := range ns.rooms {
+//		rooms[i] = room
+//		i++
+//	}
+//	ns.roomsMutex.RUnlock()
+//
+//	return rooms
+//}
+//
+//// LeaveAll method sends a remote and local leave room signal `OnRoomLeave` to and for all rooms
+//// and fires the `OnRoomLeft` event if succeed.
+//func (ns *NSConn) LeaveAll(ctx context.Context) error {
+//	if ns == nil {
+//		return nil
+//	}
+//
+//	ns.roomsMutex.Lock()
+//	defer ns.roomsMutex.Unlock()
+//
+//	leaveMsg := Message{Namespace: ns.namespace, Event: OnRoomLeave, IsLocal: true, locked: true}
+//	for room := range ns.rooms {
+//		leaveMsg.Room = room
+//		if err := ns.askRoomLeave(ctx, leaveMsg, false); err != nil {
+//			return err
+//		}
+//	}
+//
+//	return nil
+//}
+//
+//func (ns *NSConn) forceLeaveAll(isLocal bool) {
+//	ns.roomsMutex.Lock()
+//	defer ns.roomsMutex.Unlock()
+//
+//	leaveMsg := Message{Namespace: ns.namespace, Event: OnRoomLeave, IsForced: true, IsLocal: isLocal}
+//	for room := range ns.rooms {
+//		leaveMsg.Room = room
+//		ns.events.fireEvent(ns, leaveMsg)
+//
+//		delete(ns.rooms, room)
+//
+//		leaveMsg.Event = OnRoomLeft
+//		ns.events.fireEvent(ns, leaveMsg)
+//
+//		leaveMsg.Event = OnRoomLeave
+//	}
+//}
+//
+//func (ns *NSConn) askPartyJoin(ctx context.Context, partyID string) (*Party, error) {
+//	if ns.Party != nil {
+//		return nil, errors.New("rời phòng cái đi rồi yêu cầu cái khác bạn eiii")
+//	}
+//
+//	joinMsg := Message{
+//		Namespace: ns.namespace,
+//		Event:     OnRoomJoin,
+//	}
+//
+//	_, err := ns.Ask(ctx, joinMsg)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	err = ns.events.fireEvent(ns, joinMsg)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	room = newRoom(ns, roomName)
+//	ns.roomsMutex.Lock()
+//	ns.rooms[roomName] = room
+//	ns.roomsMutex.Unlock()
+//
+//	joinMsg.Event = OnRoomJoined
+//	ns.events.fireEvent(ns, joinMsg)
+//	return room, nil
+//}
+//
+//func (ns *NSConn) replyRoomJoin(msg Message) {
+//	if ns == nil || msg.wait == "" || msg.isNoOp {
+//		return
+//	}
+//
+//	ns.roomsMutex.RLock()
+//	_, ok := ns.rooms[msg.Room]
+//	ns.roomsMutex.RUnlock()
+//	if !ok {
+//		err := ns.events.fireEvent(ns, msg)
+//		if err != nil {
+//			msg.Err = err
+//			ns.Conn.Write(msg)
+//			return
+//		}
+//		ns.roomsMutex.Lock()
+//		ns.rooms[msg.Room] = newRoom(ns, msg.Room)
+//		ns.roomsMutex.Unlock()
+//
+//		msg.Event = OnRoomJoined
+//		ns.events.fireEvent(ns, msg)
+//	}
+//
+//	ns.Conn.writeEmptyReply(msg.wait)
+//}
+//
+//func (ns *NSConn) askRoomLeave(ctx context.Context, msg Message, lock bool) error {
+//	if ns == nil {
+//		return nil
+//	}
+//
+//	if lock {
+//		ns.roomsMutex.RLock()
+//	}
+//	_, ok := ns.rooms[msg.Room]
+//	if lock {
+//		ns.roomsMutex.RUnlock()
+//	}
+//
+//	if !ok {
+//		return ErrBadRoom
+//	}
+//
+//	_, err := ns.Conn.Ask(ctx, msg)
+//	if err != nil {
+//		return err
+//	}
+//
+//	// msg.IsLocal = true
+//	err = ns.events.fireEvent(ns, msg)
+//	if err != nil {
+//		return err
+//	}
+//
+//	if lock {
+//		ns.roomsMutex.Lock()
+//	}
+//
+//	delete(ns.rooms, msg.Room)
+//
+//	if lock {
+//		ns.roomsMutex.Unlock()
+//	}
+//
+//	msg.Event = OnRoomLeft
+//	ns.events.fireEvent(ns, msg)
+//
+//	return nil
+//}
+//
+//func (ns *NSConn) replyRoomLeave(msg Message) {
+//	if ns == nil || msg.wait == "" || msg.isNoOp {
+//		return
+//	}
+//
+//	room := ns.Room(msg.Room)
+//	if room == nil {
+//		ns.Conn.writeEmptyReply(msg.wait)
+//		return
+//	}
+//
+//	// if client then we need to respond to server and delete the room without ask the local event.
+//	if ns.Conn.IsClient() {
+//		ns.events.fireEvent(ns, msg)
+//
+//		ns.roomsMutex.Lock()
+//		delete(ns.rooms, msg.Room)
+//		ns.roomsMutex.Unlock()
+//
+//		ns.Conn.writeEmptyReply(msg.wait)
+//
+//		msg.Event = OnRoomLeft
+//		ns.events.fireEvent(ns, msg)
+//		return
+//	}
+//
+//	// server-side, check for error on the local event first.
+//	err := ns.events.fireEvent(ns, msg)
+//	if err != nil {
+//		msg.Err = err
+//		ns.Conn.Write(msg)
+//		return
+//	}
+//
+//	ns.roomsMutex.Lock()
+//	delete(ns.rooms, msg.Room)
+//	ns.roomsMutex.Unlock()
+//
+//	msg.Event = OnRoomLeft
+//	ns.events.fireEvent(ns, msg)
+//
+//	ns.Conn.writeEmptyReply(msg.wait)
+//}
 
 //#region Tinh comment room, chuyen qua party
 //Room
