@@ -2,7 +2,7 @@ package wolfsocket
 
 import (
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
-	"sync"
+	uuid "github.com/iris-contrib/go.uuid"
 )
 
 const prefixParty = "party."
@@ -10,43 +10,45 @@ const prefixParty = "party."
 type Party struct {
 	ID string
 
-	membersMutex sync.RWMutex
-	members      map[string]struct{}
+	//partyInfo
 }
 
-func newParty(partyID string) *Party {
+func NewParty(partyID string) *Party {
+	if partyID == "" {
+		partyID = genID()
+	}
 	return &Party{
 		ID: partyID,
 	}
 }
 
-func (p *Party) AskJoinParty(conn *NSConn) string {
-	panic("")
+func genID() string {
+	return uuid.Must(uuid.NewV4()).String()
 }
 
-func (p *Party) OnJoinParty(conn *NSConn) error {
-	if conn.server().usesStackExchange() {
-		conn.server().StackExchange.Subscribe(conn.Conn, p.getChannel())
-	}
-	//conn.events.fireEvent(conn, Message{})
-	//fire event
-	p.members[conn.Conn.ID()] = struct{}{}
-	//save cache
-	return nil
+func (p *Party) Broadcast(conn *NSConn, msg ...protos.ServerMessage) {
+	conn.SBroadcast(p.getChannel(), msg...)
 }
 
-func (p *Party) OnAnotherJoinParty(userID string) error {
-	p.members[userID] = struct{}{}
-	return nil
+func (p *Party) Subscribe(conn *NSConn) {
+	conn.Subscribe(p.getChannel())
 }
-
-func (p *Party) Broadcast(conn *NSConn, msg protos.ServerMessage) {
-	conn.SBroadcast()
+func (p *Party) Unsubscribe(conn *NSConn) {
+	conn.Unsubscribe(p.getChannel())
 }
 
 func (p *Party) String() string {
 	return p.ID
 }
+
 func (p *Party) getChannel() string {
 	return prefixParty + p.ID
+}
+
+func (p *Party) Save() error {
+	return nil
+}
+
+func (p *Party) Update() error {
+	return nil
 }

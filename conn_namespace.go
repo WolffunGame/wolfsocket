@@ -2,6 +2,7 @@ package wolfsocket
 
 import (
 	"context"
+	errors "errors"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"reflect"
 )
@@ -97,6 +98,10 @@ func (nsConn *NSConn) Subscribe(channel string) {
 	nsConn.server().StackExchange.Subscribe(nsConn.Conn, channel)
 }
 
+func (nsConn *NSConn) Unsubscribe(channel string) {
+	nsConn.server().StackExchange.Unsubscribe(nsConn.Conn, channel)
+}
+
 func (nsConn *NSConn) ForceDisconnect() {
 	nsConn.Conn.Close()
 }
@@ -119,6 +124,17 @@ func (ns *NSConn) Namespace() string {
 }
 
 // PARTY
+//func (ns *NSConn) CreateParty(ctx context.Context) (*Party, error) {
+//	if ns == nil {
+//		return nil, ErrWrite
+//	}
+//	if ns.Party != nil {
+//		return nil, errors.New("rời phòng cái đi rồi yêu cầu cái khác bạn eiii")
+//	}
+//
+//	return
+//}
+//
 //func (ns *NSConn) JoinParty(ctx context.Context, partyID string) (*Party, error) {
 //	if ns == nil {
 //		return nil, ErrWrite
@@ -126,6 +142,107 @@ func (ns *NSConn) Namespace() string {
 //
 //	return ns.askPartyJoin(ctx, partyID)
 //}
+//
+//func (ns *NSConn) askPartyJoin(ctx context.Context, partyID string) (*Party, error) {
+//	if ns.Party != nil {
+//		return nil, errors.New("rời phòng cái đi rồi yêu cầu cái khác bạn eiii")
+//	}
+//
+//	joinMsg := protos.ServerMessage{
+//		Namespace: ns.namespace,
+//		EventName: OnPartyJoin,
+//	}
+//	party := NewParty(partyID)
+//	_, err := ns.AskServer(party.GetChannel(), joinMsg)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	err = ns.events.fireEvent(ns, joinMsg)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	joinMsg.Event = OnRoomJoined
+//	ns.events.fireEvent(ns, joinMsg)
+//	return party, nil
+//}
+
+func (ns *NSConn) replyPartyJoin(msg Message) {
+	if ns == nil {
+		return
+	}
+
+	//OnPartyJoin event( check can join party ,...)
+	err := ns.events.fireEvent(ns, msg)
+	if err != nil {
+		msg.Err = err
+		ns.Conn.Write(msg)
+		return
+	}
+
+	if ns.Party == nil {
+		msg.Err = errors.New("join failed, recheck processing OnPartyJoin")
+		ns.Conn.Write(msg)
+		return
+	}
+
+	ns.Party.Subscribe(ns)
+
+	msg.Event = OnRoomJoined
+	ns.events.fireEvent(ns, msg)
+
+	ns.Conn.writeEmptyReply("")
+}
+
+// remote request
+func (ns *NSConn) replyPartyLeave(msg Message) {
+	if ns == nil {
+		return
+	}
+
+	party := ns.Party
+	if party == nil {
+		ns.Conn.writeEmptyReply("")
+		return
+	}
+
+	// server-side, check for error on the local event first.
+	err := ns.events.fireEvent(ns, msg)
+	if err != nil {
+		msg.Err = err
+		ns.Conn.Write(msg)
+		return
+	}
+
+	ns.Party.Unsubscribe(ns)
+	ns.Party = nil
+
+	msg.Event = OnRoomLeft
+	ns.events.fireEvent(ns, msg)
+	ns.Conn.writeEmptyReply(msg.wait)
+}
+
+// server ask
+func (ns *NSConn) askRoomLeave(ctx context.Context, msg Message) error {
+	if ns == nil {
+		return nil
+	}
+
+	err := ns.events.fireEvent(ns, msg)
+	if err != nil {
+		return err
+	}
+
+	ns.Party.Unsubscribe(ns)
+	ns.Party = nil
+
+	msg.Event = OnRoomLeft
+	ns.events.fireEvent(ns, msg)
+
+	return nil
+}
+
 //
 //// Room method returns a joined `Room`.
 //func (ns *NSConn) Room(roomName string) *Room {
