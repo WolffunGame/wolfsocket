@@ -207,6 +207,7 @@ func (exc *StackExchange) publish(namespace string, msg *protos.ServerMessage) e
 
 func (exc *StackExchange) publishCommand(channel string, b []byte) error {
 	//cmd := radix.FlatCmd(nil, "PUBLISH", channel, b)
+	wolfsocket.Debugf("publishCommand %s %s", channel, string(b))
 	return exc.client.Publish(exc.ctx(), channel, b).Err()
 }
 
@@ -276,6 +277,10 @@ func (exc *StackExchange) getChannel(key string) string {
 }
 
 func (exc *StackExchange) handleMessage(redisMsg *redis.Message) error {
+	if redisMsg == nil {
+		//log
+		return nil
+	}
 	serverMsg := protos.ServerMessage{}
 	err := proto.Unmarshal([]byte(redisMsg.Payload), &serverMsg)
 	if err != nil {
