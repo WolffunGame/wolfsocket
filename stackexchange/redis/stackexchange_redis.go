@@ -106,7 +106,7 @@ func (exc *StackExchange) run() {
 			exc.subscribers[s.conn] = s
 		case m := <-exc.subscribe:
 			if sub, ok := exc.subscribers[m.conn]; ok {
-				err := sub.pubSub.Subscribe(context.Background(), m.channel)
+				err := sub.pubSub.Subscribe(context.Background(), exc.getChannel(m.channel))
 				if err != nil {
 					exc.subscribe <- m //?? retry
 					continue
@@ -164,14 +164,6 @@ func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
 	}
 
 	exc.addSubscriber <- s
-
-	subAction := subscribeAction{
-		c,
-		exc.getChannel(c.ID()),
-	}
-
-	exc.subscribe <- subAction
-
 	return nil
 }
 

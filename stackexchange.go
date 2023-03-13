@@ -24,10 +24,10 @@ type StackExchange interface {
 	// manually by server or client or by network failure.
 	OnDisconnect(c *Conn)
 
-	//DEPRECATED:  use PublishServer
 	// Publish should publish messages through a stackexchange.
 	// It's called automatically on neffos broadcasting.
 	//Publish(msgs []Message) bool
+	
 	// Subscribe should subscribe to a specific namespace,
 	// it's called automatically on neffos namespace connected.
 	Subscribe(c *Conn, namespace string)
