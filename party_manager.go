@@ -24,10 +24,13 @@ func (p *PartyManager) FindParty(partyID string) (*Party, error) {
 func (p *PartyManager) CreateNewParty() (*Party, error) {
 	p.partiesMutex.Lock()
 	defer p.partiesMutex.Unlock()
-	if party, exists := p.parties[p.genID()]; exists {
-		return party, nil
-	}
-	return nil, ErrPartyNotFound
+	partyID := p.genID()
+	party := newParty(partyID)
+	//if party, exists := p.parties[partyID]; exists {
+	//	return party, nil
+	//}
+	p.parties[partyID] = party
+	return party, nil
 }
 
 func (p *PartyManager) genID() string {
