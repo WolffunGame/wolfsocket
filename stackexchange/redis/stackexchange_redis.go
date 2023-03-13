@@ -352,7 +352,7 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 	return nil
 }
 
-func (exc *StackExchange) handleServerMessage(namespace, payload string, events wolfsocket.Events) error {
+func (exc *StackExchange) handleServerMessage(namespace, payload string, event wolfsocket.Events) error {
 	serverMsg := protos.ServerMessage{}
 	err := proto.Unmarshal([]byte(payload), &serverMsg)
 	if err != nil {
@@ -361,11 +361,6 @@ func (exc *StackExchange) handleServerMessage(namespace, payload string, events 
 
 	receivers := serverMsg.To
 	if len(receivers) == 0 {
-		return nil
-	}
-
-	event, exists := exc.namespaces[namespace]
-	if !exists {
 		return nil
 	}
 
