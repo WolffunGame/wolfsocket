@@ -33,13 +33,12 @@ func NewRedisStore(client redis.UniversalClient) (*RedisStore, error) {
 }
 
 func (s *RedisStore) SaveInfo(info BaseInfo) error {
-	key := fmt.Sprintf("base:%s", info.GetID())
 	value, err := json.Marshal(info)
 	if err != nil {
 		return err
 	}
 
-	err = s.client.Set(ctx, key, value, time.Hour).Err()
+	err = s.client.Set(ctx, info.GetKey(), value, time.Hour).Err()
 	if err != nil {
 		return err
 	}
