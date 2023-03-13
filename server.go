@@ -574,18 +574,18 @@ func Exclude(connID string) fmt.Stringer { return stringerValue{connID} }
 //}
 
 // SBroadcast Broadcast server
-func (s *Server) SBroadcast(namespace string, msgs ...protos.ServerMessage) error {
-	return s.StackExchange.PublishServer(namespace, msgs)
+func (s *Server) SBroadcast(channel string, msgs ...protos.ServerMessage) error {
+	return s.StackExchange.Publish(channel, msgs)
 }
 
-func (s *Server) AskServer(namespace string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
+func (s *Server) AskServer(channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
 	//You cannot ask client in this case or ask more than 1 conn
 	if msg.ToClient || len(msg.To) != 1 {
 		return nil, ErrInvalidPayload
 	}
 
 	msg.Token = uuid.Must(uuid.NewV4()).String()
-	return s.StackExchange.AskServer(namespace, msg)
+	return s.StackExchange.AskServer(channel, msg)
 }
 
 // DEPRECATED:

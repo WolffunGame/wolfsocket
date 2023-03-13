@@ -8,6 +8,8 @@ import (
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/proto"
+	"log"
+	"strings"
 	"time"
 )
 
@@ -38,6 +40,8 @@ type StackExchange struct {
 	subscribe     chan subscribeAction
 	unsubscribe   chan unsubscribeAction
 	delSubscriber chan closeAction
+
+	close chan struct{}
 }
 
 type (
@@ -83,20 +87,23 @@ func NewStackExchange(cfg StackExchangeCfgs) (*StackExchange, error) {
 		delSubscriber: make(chan closeAction),
 		subscribe:     make(chan subscribeAction),
 		unsubscribe:   make(chan unsubscribeAction),
+		close:         make(chan struct{}),
 	}
 
 	go exc.run()
-
+	go exc.serverPubSub(cfg.Namespaces)
 	return exc, nil
 }
 
 func (exc *StackExchange) Close() {
+	exc.close <- struct{}{}
 	exc.client.Close()
 	close(exc.addSubscriber)
 	close(exc.delSubscriber)
 	close(exc.subscribe)
 	close(exc.unsubscribe)
 	//close everything
+
 }
 
 func (exc *StackExchange) run() {
@@ -123,8 +130,41 @@ func (exc *StackExchange) run() {
 				_ = sub.pubSub.Close()
 				delete(exc.subscribers, m.conn)
 			}
+
 		}
 	}
+}
+
+// Subscribe by namespace
+func (exc *StackExchange) serverPubSub(namespaces wolfsocket.Namespaces) {
+	pubSub := exc.client.Subscribe(nil)
+
+	for namespace, _ := range namespaces {
+		err := pubSub.Subscribe(exc.ctx(), exc.getChannel(namespace))
+		if err != nil {
+			log.Fatal("Cannot Subscribe namespace channel")
+		}
+	}
+	ch := pubSub.Channel()
+	// Loop to handle incoming messages
+	for {
+		select {
+		case msg := <-ch:
+			// Handle the message
+			namespace := strings.TrimPrefix(msg.Channel, prefixChannel)
+			if event, ok := namespaces[namespace]; ok {
+				_ = exc.handleServerMessage(namespace, msg.Payload, event)
+			}
+		case <-exc.close:
+			// Unsubscribe from channels and close connection
+			for namespace := range namespaces {
+				pubSub.Unsubscribe(exc.ctx(), exc.getChannel(namespace))
+			}
+			pubSub.Close()
+			return
+		}
+	}
+
 }
 
 //using getChannelV2
@@ -155,7 +195,7 @@ func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
 		for {
 			select {
 			case msg := <-pubSub.Channel():
-				exc.handleMessage(msg)
+				exc.handleMessage(msg, c)
 			}
 		}
 	}()
@@ -168,22 +208,9 @@ func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
 	return nil
 }
 
-// Publish publishes messages through redis.
-// It's called automatically on wolfsocket broadcasting.
-func (exc *StackExchange) Publish(msgs []wolfsocket.Message) bool {
-	//log
-	return false
-	//	for _, msg := range msgs {
-	//		if !exc.publish(msg) {
-	//			return false
-	//		}
-	//	}
-	//
-	//	return true
-}
-func (exc *StackExchange) PublishServer(namespace string, msgs []protos.ServerMessage) error {
+func (exc *StackExchange) Publish(channel string, msgs []protos.ServerMessage) error {
 	for _, msg := range msgs {
-		if err := exc.publish(namespace, &msg); err != nil {
+		if err := exc.publish(channel, &msg); err != nil {
 			return err
 		}
 	}
@@ -191,9 +218,9 @@ func (exc *StackExchange) PublishServer(namespace string, msgs []protos.ServerMe
 	return nil
 }
 
-func (exc *StackExchange) publish(namespace string, msg *protos.ServerMessage) error {
-	if msg == nil || namespace == "" {
-		return ErrNamespaceEmpty
+func (exc *StackExchange) publish(channel string, msg *protos.ServerMessage) error {
+	if msg == nil || channel == "" {
+		return ErrChannelEmpty
 	}
 
 	data, err := proto.Marshal(msg)
@@ -201,9 +228,8 @@ func (exc *StackExchange) publish(namespace string, msg *protos.ServerMessage) e
 		return err
 	}
 
-	channel := exc.getChannel(namespace)
 	//return exc.redisClient.Publish(context.Background(), channel, data).Err()
-	return exc.publishCommand(channel, data)
+	return exc.publishCommand(exc.getChannel(channel), data)
 }
 
 func (exc *StackExchange) publishCommand(channel string, b []byte) error {
@@ -277,17 +303,61 @@ func (exc *StackExchange) getChannel(key string) string {
 	return prefixChannel + key
 }
 
-func (exc *StackExchange) handleMessage(redisMsg *redis.Message) error {
+func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocket.Conn) error {
 	if redisMsg == nil {
 		//log
 		return nil
 	}
+
 	serverMsg := protos.ServerMessage{}
 	err := proto.Unmarshal([]byte(redisMsg.Payload), &serverMsg)
 	if err != nil {
 		return err
 	}
 	namespace := serverMsg.Namespace
+
+	//get namespace conn
+	nsconn := conn.Namespace(namespace)
+	if nsconn == nil {
+		return nil
+	}
+
+	//get namespace event
+	event, exists := exc.namespaces[namespace]
+	if !exists {
+		return nil
+	}
+
+	msg := wolfsocket.Message{
+		Namespace:    namespace,
+		Event:        serverMsg.EventName,
+		FromExplicit: serverMsg.From,
+		Body:         serverMsg.Body,
+	}
+	//if msg for client, send back to remote
+	if serverMsg.ToClient {
+		conn.Write(msg)
+		return nil
+	}
+
+	//FireEvent and Reply to this message if this is a "ask"
+	msg.Token = serverMsg.Token
+	msg.IsServer = true
+	errEvent := event.FireEvent(nsconn, msg)
+	//reply if to
+	if serverMsg.Token == "" {
+		_ = exc.Reply(errEvent, serverMsg.Token)
+	}
+
+	return nil
+}
+
+func (exc *StackExchange) handleServerMessage(namespace, payload string, events wolfsocket.Events) error {
+	serverMsg := protos.ServerMessage{}
+	err := proto.Unmarshal([]byte(payload), &serverMsg)
+	if err != nil {
+		return err
+	}
 
 	receivers := serverMsg.To
 	if len(receivers) == 0 {
@@ -327,8 +397,8 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message) error {
 	return nil
 }
 
-func (exc *StackExchange) AskServer(namespace string, msg protos.ServerMessage) (response *protos.ReplyMessage, err error) {
-	if msg.Token == "" || namespace == "" {
+func (exc *StackExchange) AskServer(channel string, msg protos.ServerMessage) (response *protos.ReplyMessage, err error) {
+	if msg.Token == "" || channel == "" {
 		err = wolfsocket.ErrInvalidPayload
 		return
 	}
@@ -339,7 +409,7 @@ func (exc *StackExchange) AskServer(namespace string, msg protos.ServerMessage) 
 		return
 	}
 	defer sub.Close()
-	if err = exc.publish(namespace, &msg); err != nil {
+	if err = exc.publish(channel, &msg); err != nil {
 		return
 	}
 
@@ -408,7 +478,7 @@ func ReplyServer(msg protos.ReplyMessage) error {
 }
 
 var (
-	ErrNamespaceEmpty = errors.New("We do not accept messages with empty namespaces")
+	ErrChannelEmpty = errors.New("We do not accept messages with empty channel")
 
 	// InvalidPrefix is returned when a message with a channel prefix
 	// that does not match the expected prefix is received during subscription.

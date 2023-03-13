@@ -27,7 +27,7 @@ type StackExchange interface {
 	// Publish should publish messages through a stackexchange.
 	// It's called automatically on neffos broadcasting.
 	//Publish(msgs []Message) bool
-	
+
 	// Subscribe should subscribe to a specific namespace,
 	// it's called automatically on neffos namespace connected.
 	Subscribe(c *Conn, namespace string)
@@ -45,9 +45,9 @@ type StackExchange interface {
 
 	// PublishServer should publish messages through a stackexchange.
 	// It's called automatically on neffos broadcasting when toClient equal false.
-	PublishServer(namespace string, msgs []protos.ServerMessage) error
+	Publish(channel string, msgs []protos.ServerMessage) error
 
-	AskServer(namespace string, msg protos.ServerMessage) (*protos.ReplyMessage, error)
+	AskServer(channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error)
 }
 
 // StackExchangeInitializer is an optional interface for a `StackExchange`.

@@ -286,15 +286,15 @@ func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
 
 // Publish publishes messages through nats.
 // It's called automatically on wolfsocket broadcasting.
-func (exc *StackExchange) Publish(msgs []wolfsocket.Message) bool {
-	for _, msg := range msgs {
-		if !exc.publish(msg) {
-			return false
-		}
-	}
-
-	return true
-}
+//func (exc *StackExchange) Publish(msgs []wolfsocket.Message) bool {
+//	for _, msg := range msgs {
+//		if !exc.publish(msg) {
+//			return false
+//		}
+//	}
+//
+//	return true
+//}
 
 func (exc *StackExchange) publish(msg wolfsocket.Message) bool {
 	subject := exc.getSubject(msg.Namespace, msg.Room, msg.To)
@@ -343,10 +343,10 @@ func (exc *StackExchange) Ask(ctx context.Context, msg wolfsocket.Message, token
 // NotifyAsk notifies and unblocks a "msg" subscriber, called on a server connection's read when expects a result.
 func (exc *StackExchange) NotifyAsk(msg wolfsocket.Message, token string) error {
 	msg.ClearWait()
-	err := exc.publisher.Publish(token, msg.Serialize())
-	if err != nil {
-		return err
-	}
+	//err := exc.publisher.Publish(token, msg.Serialize())
+	//if err != nil {
+	//	return err
+	//}
 	exc.publisher.Flush()
 	return exc.publisher.LastError()
 }
@@ -379,12 +379,12 @@ func (exc *StackExchange) OnDisconnect(c *wolfsocket.Conn) {
 	exc.delSubscriber <- closeAction{conn: c}
 }
 
-func (exc *StackExchange) PublishServer(namespace string, msgs []protos.ServerMessage) error {
+func (exc *StackExchange) Publish(channel string, msgs []protos.ServerMessage) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (exc *StackExchange) AskServer(namespace string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
+func (exc *StackExchange) AskServer(channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
 	//TODO implement me
 	panic("implement me")
 }

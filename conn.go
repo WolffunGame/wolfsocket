@@ -704,14 +704,12 @@ func (c *Conn) notifyNamespaceConnected(ns *NSConn, connectMsg Message) {
 	if !c.IsClient() && c.server.usesStackExchange() {
 		//Subscribe channel is the current namespace of this conn
 		c.server.StackExchange.Subscribe(c, ns.Conn.ID())
-		c.server.StackExchange.Subscribe(c, ns.namespace)
 	}
 }
 
 func (c *Conn) notifyNamespaceDisconnect(ns *NSConn, disconnectMsg Message) {
 	if !c.IsClient() && c.server.usesStackExchange() {
 		c.server.StackExchange.Unsubscribe(c, ns.Conn.ID())
-		c.server.StackExchange.Unsubscribe(c, ns.namespace)
 	}
 }
 
