@@ -48,6 +48,10 @@ func (ns *NSConn) String() string {
 	return ns.Conn.String()
 }
 
+func (ns *NSConn) ID() string {
+	return ns.Conn.ID()
+}
+
 // Emit method sends a message to the remote side
 // with its `Message.Namespace` filled to this specific namespace.
 func (ns *NSConn) Emit(event string, body []byte) bool {
@@ -77,16 +81,20 @@ func (ns *NSConn) AskRemote(ctx context.Context, event string, body []byte) (Mes
 	return ns.Conn.Ask(ctx, Message{Namespace: ns.namespace, Event: event, Body: body})
 }
 
-func (nsConn *NSConn) SBroadcast(msgs ...Message) error {
-	return nsConn.server().SBroadcast(nsConn.namespace)
+func (nsConn *NSConn) SBroadcast(channel string, msgs ...protos.ServerMessage) error {
+	return nsConn.server().SBroadcast(channel, msgs...)
 }
 
-func (nsConn *NSConn) AskServer(msg protos.ServerMessage) (*protos.ReplyMessage, error) {
-	return nsConn.server().AskServer(nsConn.namespace, msg)
+func (nsConn *NSConn) AskServer(channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
+	return nsConn.server().AskServer(channel, msg)
 }
 
 func (nsConn *NSConn) server() *Server {
 	return nsConn.Conn.Server()
+}
+
+func (nsConn *NSConn) Subscribe(channel string) {
+	nsConn.server().StackExchange.Subscribe(nsConn.Conn, channel)
 }
 
 func (nsConn *NSConn) ForceDisconnect() {
