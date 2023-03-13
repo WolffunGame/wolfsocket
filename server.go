@@ -177,7 +177,7 @@ func (s *Server) start() {
 		select {
 		case c := <-s.connect:
 			s.connections[c] = struct{}{}
-			s.connsByID[c.ID()] = c
+			s.connsByID[c.serverConnID] = c
 			atomic.AddUint64(&s.count, 1)
 		case c := <-s.disconnect:
 			if _, ok := s.connections[c]; ok {
@@ -212,7 +212,7 @@ func (s *Server) start() {
 				act.done <- struct{}{}
 			}
 		case fi := <-s.find:
-			for _, sID := range fi.connIDs {
+			for _, sID := range fi.serverIDs {
 				if conn, exists := s.connsByID[sID]; exists {
 					fi.call(conn)
 				}
@@ -430,8 +430,8 @@ type action struct {
 }
 
 type findAction struct {
-	connIDs []string
-	call    func(*Conn)
+	serverIDs []string
+	call      func(*Conn)
 }
 
 // Do loops through all connected connections and fires the "fn", with this method
@@ -457,14 +457,14 @@ func (s *Server) Do(fn func(*Conn), async bool) {
 // If the connection is found, it calls the function 'fn' with the connection as its argument.
 // This function is asynchronous and non-blocking. It submits a findAction object to the server's 'find' channel and returns immediately.
 // The actual search and function call are performed by the server's background goroutine.
-func (s *Server) FindAndFire(fn func(*Conn), connIDs []string) {
-	if len(connIDs) == 0 {
+func (s *Server) FindAndFire(fn func(*Conn), serverConnID []string) {
+	if len(serverConnID) == 0 {
 		return
 	}
 
 	findAct := findAction{
-		call:    fn,
-		connIDs: connIDs,
+		call:      fn,
+		serverIDs: serverConnID,
 	}
 	s.find <- findAct
 }
