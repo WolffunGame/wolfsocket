@@ -63,8 +63,6 @@ func (s *RedisStore) SaveInfo(ctx context.Context, info BaseInfo) error {
 		pipe := tx.Pipeline()
 		// Set the values using HMSet
 		pipe.HMSet(ctx, info.GetKey(), infoMap)
-		// Set the version number
-		pipe.HSet(ctx, info.GetKey(), "version", newVersion)
 		_, err = pipe.Exec(ctx)
 		if err != nil {
 			return err
