@@ -30,7 +30,7 @@ type NSConn struct {
 	// Storage across event callbacks for this namespace.
 	value reflect.Value
 
-	Party *Party
+	Party Party
 }
 
 func newNSConn(c *Conn, namespace string, events Events) *NSConn {

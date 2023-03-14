@@ -5,19 +5,23 @@ import (
 	uuid "github.com/iris-contrib/go.uuid"
 )
 
-const prefixParty = "party."
-
-type Party struct {
-	ID string
-
-	//partyInfo
+type Party interface {
+	PartyID() string
+	Subscribe(conn *NSConn)
+	Unsubscribe(conn *NSConn)
 }
 
-func NewParty(partyID string) *Party {
+const prefixParty = "party."
+
+type BaseParty struct {
+	ID string
+}
+
+func NewParty(partyID string) *BaseParty {
 	if partyID == "" {
 		partyID = genID()
 	}
-	return &Party{
+	return &BaseParty{
 		ID: partyID,
 	}
 }
@@ -26,29 +30,33 @@ func genID() string {
 	return uuid.Must(uuid.NewV4()).String()
 }
 
-func (p *Party) Broadcast(conn *NSConn, msg ...protos.ServerMessage) {
+func (p *BaseParty) Broadcast(conn *NSConn, msg ...protos.ServerMessage) {
 	conn.SBroadcast(p.getChannel(), msg...)
 }
 
-func (p *Party) Subscribe(conn *NSConn) {
+func (p *BaseParty) Subscribe(conn *NSConn) {
 	conn.Subscribe(p.getChannel())
 }
-func (p *Party) Unsubscribe(conn *NSConn) {
+func (p *BaseParty) Unsubscribe(conn *NSConn) {
 	conn.Unsubscribe(p.getChannel())
 }
 
-func (p *Party) String() string {
+func (p *BaseParty) String() string {
 	return p.ID
 }
 
-func (p *Party) getChannel() string {
+func (p *BaseParty) PartyID() string {
+	return p.ID
+}
+
+func (p *BaseParty) getChannel() string {
 	return prefixParty + p.ID
 }
 
-func (p *Party) Save() error {
+func (p *BaseParty) Save() error {
 	return nil
 }
 
-func (p *Party) Update() error {
+func (p *BaseParty) Update() error {
 	return nil
 }
