@@ -168,23 +168,27 @@ func (ns *NSConn) Namespace() string {
 //	return party, nil
 //}
 
-func (ns *NSConn) replyPartyJoin(msg Message) {
+func (ns *NSConn) replyPartyJoin(msg Message) error {
 	if ns == nil {
-		return
+		return errInvalidMethod
 	}
 
 	//OnPartyJoin event( check can join party ,...)
 	err := ns.events.fireEvent(ns, msg)
 	if err != nil {
-		msg.Err = err
-		ns.Conn.Write(msg)
-		return
+		if !msg.IsServer {
+			msg.Err = err
+			ns.Conn.Write(msg)
+		}
+		return err
 	}
 
 	if ns.Party == nil {
-		msg.Err = errors.New("join failed, recheck processing OnPartyJoin")
-		ns.Conn.Write(msg)
-		return
+		if !msg.IsServer {
+			msg.Err = errors.New("join failed, recheck processing OnPartyJoin")
+			ns.Conn.Write(msg)
+		}
+		return ErrBadRoom
 	}
 
 	ns.Party.Subscribe(ns)
@@ -192,27 +196,34 @@ func (ns *NSConn) replyPartyJoin(msg Message) {
 	msg.Event = OnRoomJoined
 	ns.events.fireEvent(ns, msg)
 
-	ns.Conn.writeEmptyReply("")
+	if !msg.IsServer {
+		ns.Conn.writeEmptyReply("")
+	}
+	return nil
 }
 
 // remote request
-func (ns *NSConn) replyPartyLeave(msg Message) {
+func (ns *NSConn) replyPartyLeave(msg Message) error {
 	if ns == nil {
-		return
+		return errInvalidMethod
 	}
 
 	party := ns.Party
 	if party == nil {
-		ns.Conn.writeEmptyReply("")
-		return
+		if !msg.IsServer {
+			ns.Conn.writeEmptyReply("")
+		}
+		return ErrBadRoom
 	}
 
 	// server-side, check for error on the local event first.
 	err := ns.events.fireEvent(ns, msg)
 	if err != nil {
-		msg.Err = err
-		ns.Conn.Write(msg)
-		return
+		if !msg.IsServer {
+			msg.Err = err
+			ns.Conn.Write(msg)
+		}
+		return err
 	}
 
 	ns.Party.Unsubscribe(ns)
@@ -220,7 +231,10 @@ func (ns *NSConn) replyPartyLeave(msg Message) {
 
 	msg.Event = OnRoomLeft
 	ns.events.fireEvent(ns, msg)
-	ns.Conn.writeEmptyReply(msg.wait)
+	if !msg.IsServer {
+		ns.Conn.writeEmptyReply(msg.wait)
+	}
+	return nil
 }
 
 // server ask
@@ -241,6 +255,17 @@ func (ns *NSConn) askRoomLeave(ctx context.Context, msg Message) error {
 	ns.events.fireEvent(ns, msg)
 
 	return nil
+}
+
+func (ns *NSConn) FireEvent(msg Message) error {
+	switch msg.Event {
+	case OnPartyJoin:
+		return ns.replyPartyJoin(msg)
+	case OnPartyLeave:
+		return ns.replyPartyLeave(msg)
+	default:
+		return ns.events.fireEvent(ns, msg)
+	}
 }
 
 //

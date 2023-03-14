@@ -3,7 +3,6 @@ package wolfsocket
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -464,7 +463,6 @@ func (c *Conn) handleMessage(msg Message) error {
 	//	ns.replyRoomLeave(msg)
 	//}
 	case OnPartyJoin:
-		fmt.Println("OnPartyJoin")
 		if ns, ok := c.tryNamespace(msg); ok {
 			ns.replyPartyJoin(msg)
 		}
