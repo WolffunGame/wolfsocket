@@ -11,6 +11,9 @@ type Party interface {
 	Unsubscribe(conn *NSConn)
 
 	Broadcast(conn *NSConn, msg ...protos.ServerMessage)
+
+	Lock() error
+	Unlock() error
 }
 
 const prefixParty = "party."
