@@ -322,18 +322,13 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 		return nil
 	}
 
-	//get namespace event
-	event, exists := exc.namespaces[namespace]
-	if !exists {
-		return nil
-	}
-
 	msg := wolfsocket.Message{
 		Namespace:    namespace,
 		Event:        serverMsg.EventName,
 		FromExplicit: serverMsg.From,
 		Body:         serverMsg.Body,
 	}
+
 	//if msg for client, send back to remote
 	if serverMsg.ToClient {
 		conn.Write(msg)
@@ -343,13 +338,15 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 	//FireEvent and Reply to this message if this is a "ask"
 	msg.Token = serverMsg.Token
 	msg.IsServer = true
-	errEvent := event.FireEvent(nsconn, msg)
+
+	err = nsconn.FireEvent(msg)
+
 	//reply if to
 	if serverMsg.Token == "" {
-		_ = exc.Reply(errEvent, serverMsg.Token)
+		_ = exc.Reply(err, serverMsg.Token)
 	}
 
-	return nil
+	return err
 }
 
 func (exc *StackExchange) handleServerMessage(namespace, payload string, event wolfsocket.Events) error {
@@ -456,8 +453,10 @@ func isReplyServer(err error) *protos.ReplyMessage {
 		if r, ok := err.(replyServer); ok {
 			return &r.msg
 		}
+		return &protos.ReplyMessage{Data: &protos.ReplyMessage_ErrorCode{ErrorCode: getErrCode(err)}}
 	}
-	return &protos.ReplyMessage{Data: &protos.ReplyMessage_ErrorCode{ErrorCode: getErrCode(err)}}
+
+	return &protos.ReplyMessage{Data: &protos.ReplyMessage_Body{Body: []byte{}}}
 }
 
 func getErrCode(err error) uint32 {
