@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
-	"time"
 )
 
 var (
@@ -18,7 +17,6 @@ type BaseInfo interface {
 	GetID() string
 	GetKey() string
 }
-
 type RedisStore struct {
 	client redis.UniversalClient
 }
@@ -38,7 +36,14 @@ func (s *RedisStore) SaveInfo(info BaseInfo) error {
 		return err
 	}
 
-	err = s.client.Set(ctx, info.GetKey(), value, time.Hour).Err()
+	key := info.GetKey()
+
+	pipe := s.client.Pipeline()
+
+	pipe.HSet(ctx, key, "value", value)
+	//pipe.Expire(ctx, key, time.Hour)
+
+	_, err = pipe.Exec(ctx)
 	if err != nil {
 		return err
 	}
@@ -47,7 +52,7 @@ func (s *RedisStore) SaveInfo(info BaseInfo) error {
 }
 
 func (s *RedisStore) GetInfo(key string, info BaseInfo) error {
-	result, err := s.client.Get(ctx, key).Result()
+	result, err := s.client.HGet(ctx, key, "value").Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return ErrBaseInfoNotFound
@@ -63,23 +68,12 @@ func (s *RedisStore) GetInfo(key string, info BaseInfo) error {
 	return nil
 }
 
-func (s *RedisStore) UpdateInfo(info BaseInfo) error {
-	key := info.GetKey()
-	value, err := json.Marshal(info)
-	if err != nil {
-		return err
-	}
-
-	err = s.client.Set(ctx, key, value, 0).Err()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (s *RedisStore) DeleteInfo(key string) error {
-	err := s.client.Del(ctx, key).Err()
+	pipe := s.client.Pipeline()
+
+	pipe.Del(ctx, key)
+
+	_, err := pipe.Exec(ctx)
 	if err != nil {
 		return err
 	}
