@@ -16,8 +16,8 @@ type Party interface {
 	Lock() error
 	Unlock() error
 
-	Join(ctx context.Context, playerID string)
-	Leave(ctx context.Context, playerID string)
+	Join(ctx context.Context, playerID string) error
+	Leave(ctx context.Context, playerID string) error
 }
 
 const prefixParty = "party."
