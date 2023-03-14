@@ -9,6 +9,8 @@ type Party interface {
 	PartyID() string
 	Subscribe(conn *NSConn)
 	Unsubscribe(conn *NSConn)
+
+	Broadcast(conn *NSConn, msg ...protos.ServerMessage)
 }
 
 const prefixParty = "party."
@@ -51,12 +53,4 @@ func (p *BaseParty) PartyID() string {
 
 func (p *BaseParty) getChannel() string {
 	return prefixParty + p.ID
-}
-
-func (p *BaseParty) Save() error {
-	return nil
-}
-
-func (p *BaseParty) Update() error {
-	return nil
 }
