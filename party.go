@@ -1,6 +1,7 @@
 package wolfsocket
 
 import (
+	"context"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	uuid "github.com/iris-contrib/go.uuid"
 )
@@ -14,6 +15,9 @@ type Party interface {
 
 	Lock() error
 	Unlock() error
+
+	Join(ctx context.Context, playerID string)
+	Leave(ctx context.Context, playerID string)
 }
 
 const prefixParty = "party."
