@@ -14,6 +14,14 @@ var (
 	ErrBaseInfoNotFound = fmt.Errorf("base info not found ")
 )
 
+type ErrKeyHasBeenModified struct {
+	key string
+}
+
+func (e ErrKeyHasBeenModified) Error() string {
+	return fmt.Sprintf("key %s has been modified by another process ", e.key)
+}
+
 type BaseInfo interface {
 	GetID() string
 	GetKey() string
@@ -49,7 +57,7 @@ func (s *RedisStore) SaveInfo(ctx context.Context, info BaseInfo) error {
 
 		// Check if the version matches
 		if currentVersion != info.GetVersion() {
-			return errors.New("version mismatch")
+			return ErrKeyHasBeenModified{info.GetKey()}
 		}
 
 		// Increment the version number and update the key
@@ -81,6 +89,11 @@ func (s *RedisStore) SaveInfo(ctx context.Context, info BaseInfo) error {
 func toMap(info BaseInfo) map[string]interface{} {
 	infoValue := reflect.ValueOf(info)
 	infoType := infoValue.Type()
+
+	if infoValue.Kind() == reflect.Ptr {
+		infoValue = infoValue.Elem()
+		infoType = infoValue.Type()
+	}
 
 	// Create a map to hold the values
 	infoMap := make(map[string]interface{})
