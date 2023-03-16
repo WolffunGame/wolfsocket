@@ -323,10 +323,10 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 	}
 
 	msg := wolfsocket.Message{
-		Namespace:    namespace,
-		Event:        serverMsg.EventName,
-		FromExplicit: serverMsg.From,
-		Body:         serverMsg.Body,
+		Namespace: namespace,
+		Event:     serverMsg.EventName,
+		Body:      serverMsg.Body,
+		SetBinary: true,
 	}
 
 	//if msg for client, send back to remote
