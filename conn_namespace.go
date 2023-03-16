@@ -3,6 +3,7 @@ package wolfsocket
 import (
 	"context"
 	errors "errors"
+	"fmt"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"reflect"
 )
@@ -123,19 +124,40 @@ func (ns *NSConn) Namespace() string {
 	return ns.namespace
 }
 
+// Get Set store data ns
+func (ns *NSConn) Set(key string, value interface{}) {
+	ns.Conn.Set(key, value)
+}
+
+// Namespace return current namespace name
+func (ns *NSConn) Get(key string, value interface{}) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = errors.New(fmt.Sprintf("Can get key %s : %v", key, e))
+		}
+	}()
+	v := ns.Conn.Get(key)
+	if value == nil {
+		err = errors.New("key not found")
+		return
+	}
+	value = v
+	return
+}
+
 // PARTY
-//func (ns *NSConn) CreateParty(ctx context.Context) (*Party, error) {
+//func (ns *NSConn) CreateParty(ctx context.Context) (*BaseParty, error) {
 //	if ns == nil {
 //		return nil, ErrWrite
 //	}
-//	if ns.Party != nil {
+//	if ns.BaseParty != nil {
 //		return nil, errors.New("rời phòng cái đi rồi yêu cầu cái khác bạn eiii")
 //	}
 //
 //	return
 //}
 //
-//func (ns *NSConn) JoinParty(ctx context.Context, partyID string) (*Party, error) {
+//func (ns *NSConn) JoinParty(ctx context.Context, partyID string) (*BaseParty, error) {
 //	if ns == nil {
 //		return nil, ErrWrite
 //	}
@@ -258,14 +280,7 @@ func (ns *NSConn) askRoomLeave(ctx context.Context, msg Message) error {
 }
 
 func (ns *NSConn) FireEvent(msg Message) error {
-	switch msg.Event {
-	case OnPartyJoin:
-		return ns.replyPartyJoin(msg)
-	case OnPartyLeave:
-		return ns.replyPartyLeave(msg)
-	default:
-		return ns.events.fireEvent(ns, msg)
-	}
+	return ns.events.fireEvent(ns, msg)
 }
 
 //
