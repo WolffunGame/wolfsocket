@@ -137,11 +137,13 @@ func (ns *NSConn) Get(key string, value interface{}) (err error) {
 		}
 	}()
 	v := ns.Conn.Get(key)
-	if value == nil {
-		err = errors.New("key not found")
-		return
+	// create a pointer to the value parameter
+	ptr := reflect.ValueOf(value)
+	if ptr.Kind() != reflect.Ptr || ptr.IsNil() {
+		return errors.New("value parameter must be a non-nil pointer")
 	}
-	value = v
+	// assign the value to the pointer, using reflection
+	reflect.ValueOf(value).Elem().Set(reflect.ValueOf(v))
 	return
 }
 
