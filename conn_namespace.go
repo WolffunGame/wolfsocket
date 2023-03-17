@@ -192,15 +192,19 @@ func (ns *NSConn) Get(key string, value interface{}) (err error) {
 //	return party, nil
 //}
 
-func (ns *NSConn) replyPartyJoin(msg Message) error {
+func (ns *NSConn) replyPartyJoin(msg Message) {
 	if ns == nil {
-		return errInvalidMethod
+		msg.Err = errInvalidMethod
+		ns.Conn.Write(msg)
+		return
 	}
 
 	//OnPartyJoin event( check can join party ,...)
 	err := ns.events.fireEvent(ns, msg)
 	if err != nil {
-		return err
+		msg.Err = err
+		ns.Conn.Write(msg)
+		return
 	}
 
 	//when you don't handle OnJoinParty
@@ -213,24 +217,30 @@ func (ns *NSConn) replyPartyJoin(msg Message) error {
 	ns.events.fireEvent(ns, msg)
 
 	ns.Conn.Write(msg) //send back remote side msg OnPartyJoined
-	return nil
+	return
 }
 
 // remote request
-func (ns *NSConn) replyPartyLeave(msg Message) error {
+func (ns *NSConn) replyPartyLeave(msg Message) {
 	if ns == nil {
-		return errInvalidMethod
+		msg.Err = errInvalidMethod
+		ns.Conn.Write(msg)
+		return
 	}
 
 	party := ns.Party
 	if party == nil {
-		return ErrBadRoom
+		msg.Err = ErrBadRoom
+		ns.Conn.Write(msg)
+		return
 	}
 
 	// server-side, check for error on the local event first.
 	err := ns.events.fireEvent(ns, msg)
 	if err != nil {
-		return err
+		msg.Err = err
+		ns.Conn.Write(msg)
+		return
 	}
 
 	//unsubscribe and broadcast left message all player this room
@@ -242,7 +252,7 @@ func (ns *NSConn) replyPartyLeave(msg Message) error {
 	ns.events.fireEvent(ns, msg)
 
 	ns.Conn.Write(msg) //send back remote side msg OnPartyLeft
-	return nil
+	return
 }
 
 func (ns *NSConn) FireEvent(msg Message) error {
