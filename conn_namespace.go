@@ -253,6 +253,17 @@ func (ns *NSConn) askPartyInvite(msg Message) {
 		ns.Conn.Write(msg)
 		return
 	}
+
+	receiverID := string(msg.Body)
+	if len(receiverID) > 0 {
+		//body must is connID receive invite message
+		ns.SBroadcast(receiverID, protos.ServerMessage{
+			Namespace: ns.Namespace(),
+			EventName: OnPartyReceiveMessageInvite,
+			Body:      []byte(ns.Party.PartyID()),
+			ToClient:  true,
+		})
+	}
 }
 
 func (ns *NSConn) replyPartyAcceptInvite(msg Message) {
