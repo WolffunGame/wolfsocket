@@ -239,7 +239,7 @@ func (ns *NSConn) askPartyCreate(msg Message) error {
 func (ns *NSConn) askPartyInvite(msg Message) {
 	if ns.Party == nil {
 		msgCreate := msg
-		msgCreate.Event = OnPartyJoin
+		msgCreate.Event = OnPartyCreate
 		err := ns.askPartyCreate(msgCreate)
 		if err != nil {
 			msg.Err = errors.New("cannot invite at this time")
