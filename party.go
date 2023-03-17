@@ -28,11 +28,11 @@ type BaseParty struct {
 	conn *NSConn
 }
 
-func NewParty(partyID string) Party {
+func NewParty(partyID string) BaseParty {
 	if partyID == "" {
 		partyID = genID()
 	}
-	return &BaseParty{
+	return BaseParty{
 		ID: partyID,
 	}
 }
@@ -104,9 +104,4 @@ func (p *BaseParty) Leave() error {
 
 func (p *BaseParty) getChannel() string {
 	return prefixParty + p.ID
-}
-
-func (p *BaseParty) PartyInfo() []byte {
-	//TODO implement me
-	return []byte{}
 }

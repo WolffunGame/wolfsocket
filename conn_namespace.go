@@ -226,7 +226,9 @@ func (ns *NSConn) askPartyCreate(msg Message) error {
 
 	//when you haven't handled the OnCreateParty
 	if ns.Party == nil {
-		ns.Party = NewParty("")
+		msg.Err = errors.New("the party is not available, please assign the Party in the OnCreateParty event")
+		ns.Conn.Write(msg)
+		return msg.Err
 	}
 
 	ns.Party.Create(ns)
@@ -320,8 +322,9 @@ func (ns *NSConn) replyPartyJoin(msg Message) error {
 
 	//when you haven't handled the OnJoinParty
 	if ns.Party == nil {
-		ns.Party = NewParty("")
-		ns.Party.Join(ns, nil)
+		msg.Err = errors.New("The party is not available, please assign the Party in the OnJoinParty event")
+		ns.Conn.Write(msg)
+		return msg.Err
 	}
 
 	if ns.Party.Conn() == nil {
