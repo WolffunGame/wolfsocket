@@ -303,23 +303,31 @@ func (exc *StackExchange) getChannel(key string) string {
 	return prefixChannel + key
 }
 
-func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocket.Conn) error {
+func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocket.Conn) (err error) {
 	if redisMsg == nil {
 		//log
-		return nil
+		return
 	}
 
 	serverMsg := protos.ServerMessage{}
-	err := proto.Unmarshal([]byte(redisMsg.Payload), &serverMsg)
+	err = proto.Unmarshal([]byte(redisMsg.Payload), &serverMsg)
 	if err != nil {
-		return err
+		return
 	}
+
+	defer func() {
+		//reply if to
+		if serverMsg.Token == "" {
+			_ = exc.Reply(err, serverMsg.Token)
+		}
+	}()
+
 	namespace := serverMsg.Namespace
 
 	//get namespace conn
 	nsconn := conn.Namespace(namespace)
 	if nsconn == nil {
-		return nil
+		return
 	}
 
 	msg := wolfsocket.Message{
@@ -332,7 +340,7 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 	//if msg for client, send back to remote
 	if serverMsg.ToClient {
 		conn.Write(msg)
-		return nil
+		return
 	}
 
 	//FireEvent and Reply to this message if this is a "ask"
@@ -341,12 +349,7 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 
 	err = nsconn.FireEvent(msg)
 
-	//reply if to
-	if serverMsg.Token == "" {
-		_ = exc.Reply(err, serverMsg.Token)
-	}
-
-	return err
+	return
 }
 
 func (exc *StackExchange) handleServerMessage(namespace, payload string, event wolfsocket.Events) error {
