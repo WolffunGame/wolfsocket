@@ -207,6 +207,12 @@ func (ns *NSConn) replyPartyJoin(msg Message) {
 		return
 	}
 
+	if ns.Party != nil {
+		errors.New(fmt.Sprintf("You are already in party : %s", ns.Party.PartyID()))
+		ns.Conn.Write(msg)
+		return
+	}
+
 	//OnPartyJoin event( check can join party ,...)
 	err := ns.events.fireEvent(ns, msg)
 	if err != nil {
@@ -245,7 +251,7 @@ func (ns *NSConn) replyPartyLeave(msg Message) {
 
 	party := ns.Party
 	if party == nil {
-		msg.Err = ErrBadRoom
+		msg.Err = errors.New("You are not in party ")
 		ns.Conn.Write(msg)
 		return
 	}
