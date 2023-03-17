@@ -472,7 +472,7 @@ func (c *Conn) handleMessage(msg Message) error {
 		}
 	case OnPartyLeave:
 		if ns, ok := c.tryNamespace(msg); ok {
-			_ = ns.replyPartyLeave(msg)
+			_ = ns.askPartyLeave(msg)
 		}
 	case OnPartyInvite:
 		if ns, ok := c.tryNamespace(msg); ok {
@@ -777,7 +777,7 @@ func (c *Conn) askDisconnect(ctx context.Context, msg Message, lock bool) error 
 
 	// if disconnect is allowed then leave rooms first with force property
 	// before namespace's deletion.
-	//ns.forceLeaveAll(true)
+	ns.forceLeaveAll()
 
 	if lock {
 		c.connectedNamespacesMutex.Lock()
@@ -831,7 +831,7 @@ func (c *Conn) replyDisconnect(msg Message) {
 		return
 	}
 
-	//ns.forceLeaveAll(false)
+	ns.forceLeaveAll()
 
 	c.connectedNamespacesMutex.Lock()
 	delete(c.connectedNamespaces, msg.Namespace)
@@ -1031,7 +1031,7 @@ func (c *Conn) Close() {
 			c.connectedNamespacesMutex.Lock()
 			for namespace, ns := range c.connectedNamespaces {
 				// leave rooms first with force and local property before remove the namespace completely.
-				//ns.forceLeaveAll(true)
+				ns.forceLeaveAll()
 
 				disconnectMsg.Namespace = ns.namespace
 				ns.events.fireEvent(ns, disconnectMsg)

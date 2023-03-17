@@ -200,6 +200,12 @@ func (ns *NSConn) Write(eventName string, body []byte) {
 //		ns.events.fireEvent(ns, joinMsg)
 //		return party, nil
 //	}
+func (ns *NSConn) forceLeaveAll() {
+	ns.askPartyLeave(Message{
+		Namespace: ns.namespace,
+		Event:     OnPartyLeave,
+	})
+}
 
 func (ns *NSConn) askPartyCreate(msg Message) error {
 	if ns.Party != nil {
@@ -271,7 +277,7 @@ func (ns *NSConn) askPartyInvite(msg Message) {
 func (ns *NSConn) replyPartyAcceptInvite(msg Message) {
 	if ns.Party != nil {
 		//force leave current party
-		err := ns.replyPartyLeave(Message{
+		err := ns.askPartyLeave(Message{
 			Namespace: ns.namespace,
 			Event:     OnPartyLeave,
 		})
@@ -336,7 +342,7 @@ func (ns *NSConn) replyPartyJoin(msg Message) error {
 }
 
 // remote request
-func (ns *NSConn) replyPartyLeave(msg Message) error {
+func (ns *NSConn) askPartyLeave(msg Message) error {
 	if ns == nil {
 		msg.Err = errInvalidMethod
 		ns.Conn.Write(msg)
