@@ -79,6 +79,10 @@ func (p *BaseParty) Join(nsConn *NSConn, playerInfo []byte) error {
 		EventName: OnPartySomebodyJoined,
 		Body:      playerInfo,
 		ToClient:  true,
+
+		//skip sender
+		From:         p.conn.ID(),
+		ExceptSender: true,
 	})
 
 	p.Subscribe(p.conn)
@@ -95,6 +99,10 @@ func (p *BaseParty) Leave() error {
 		EventName: OnPartySomebodyLeft,
 		Body:      []byte(p.conn.ID()),
 		ToClient:  true,
+
+		//skip sender
+		From:         p.conn.ID(),
+		ExceptSender: true,
 	})
 
 	p.conn = nil

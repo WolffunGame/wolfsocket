@@ -12,6 +12,7 @@ message ServerMessage {
 
   string token = 6;//for askServer
   bool toClient = 7;//for write Client
+  bool exceptSender = 8;
 }
 
 message ReplyMessage {

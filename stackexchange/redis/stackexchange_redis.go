@@ -314,6 +314,11 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 	if err != nil {
 		return
 	}
+	if serverMsg.ExceptSender {
+		if conn.Is(serverMsg.From) {
+			return
+		}
+	}
 
 	defer func() {
 		//reply if to
