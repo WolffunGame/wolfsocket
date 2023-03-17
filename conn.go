@@ -462,13 +462,25 @@ func (c *Conn) handleMessage(msg Message) error {
 	//if ns, ok := c.tryNamespace(msg); ok {
 	//	ns.replyRoomLeave(msg)
 	//}
+	case OnPartyCreate:
+		if ns, ok := c.tryNamespace(msg); ok {
+			_ = ns.askPartyCreate(msg)
+		}
 	case OnPartyJoin:
 		if ns, ok := c.tryNamespace(msg); ok {
-			ns.replyPartyJoin(msg)
+			_ = ns.replyPartyJoin(msg)
 		}
 	case OnPartyLeave:
 		if ns, ok := c.tryNamespace(msg); ok {
-			ns.replyPartyLeave(msg)
+			_ = ns.replyPartyLeave(msg)
+		}
+	case OnPartyInvite:
+		if ns, ok := c.tryNamespace(msg); ok {
+			ns.askPartyInvite(msg)
+		}
+	case OnPartyAcceptInvite:
+		if ns, ok := c.tryNamespace(msg); ok {
+			ns.replyPartyAcceptInvite(msg)
 		}
 	default:
 		ns, ok := c.tryNamespace(msg)

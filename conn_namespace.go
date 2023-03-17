@@ -156,71 +156,67 @@ func (ns *NSConn) Write(eventName string, body []byte) {
 }
 
 // PARTY
-//func (ns *NSConn) CreateParty(ctx context.Context) (*BaseParty, error) {
-//	if ns == nil {
-//		return nil, ErrWrite
-//	}
-//	if ns.BaseParty != nil {
-//		return nil, errors.New("rời phòng cái đi rồi yêu cầu cái khác bạn eiii")
-//	}
 //
-//	return
-//}
+//	func (ns *NSConn) CreateParty(ctx context.Context) (*BaseParty, error) {
+//		if ns == nil {
+//			return nil, ErrWrite
+//		}
+//		if ns.BaseParty != nil {
+//			return nil, errors.New("rời phòng cái đi rồi yêu cầu cái khác bạn eiii")
+//		}
 //
-//func (ns *NSConn) JoinParty(ctx context.Context, partyID string) (*BaseParty, error) {
-//	if ns == nil {
-//		return nil, ErrWrite
+//		return
 //	}
 //
-//	return ns.askPartyJoin(ctx, partyID)
-//}
+//	func (ns *NSConn) JoinParty(ctx context.Context, partyID string) (*BaseParty, error) {
+//		if ns == nil {
+//			return nil, ErrWrite
+//		}
 //
-//func (ns *NSConn) askPartyJoin(ctx context.Context, partyID string) (*Party, error) {
-//	if ns.Party != nil {
-//		return nil, errors.New("rời phòng cái đi rồi yêu cầu cái khác bạn eiii")
+//		return ns.askPartyJoin(ctx, partyID)
 //	}
 //
-//	joinMsg := protos.ServerMessage{
-//		Namespace: ns.namespace,
-//		EventName: OnPartyJoin,
-//	}
-//	party := NewParty(partyID)
-//	_, err := ns.AskServer(party.GetChannel(), joinMsg)
-//	if err != nil {
-//		return nil, err
-//	}
+//	func (ns *NSConn) askPartyJoin(ctx context.Context, partyID string) (*Party, error) {
+//		if ns.Party != nil {
+//			return nil, errors.New("rời phòng cái đi rồi yêu cầu cái khác bạn eiii")
+//		}
 //
-//	err = ns.events.fireEvent(ns, joinMsg)
-//	if err != nil {
-//		return nil, err
-//	}
+//		joinMsg := protos.ServerMessage{
+//			Namespace: ns.namespace,
+//			EventName: OnPartyJoin,
+//		}
+//		party := NewParty(partyID)
+//		_, err := ns.AskServer(party.GetChannel(), joinMsg)
+//		if err != nil {
+//			return nil, err
+//		}
 //
-//	joinMsg.Event = OnRoomJoined
-//	ns.events.fireEvent(ns, joinMsg)
-//	return party, nil
-//}
+//		err = ns.events.fireEvent(ns, joinMsg)
+//		if err != nil {
+//			return nil, err
+//		}
+//
+//		joinMsg.Event = OnRoomJoined
+//		ns.events.fireEvent(ns, joinMsg)
+//		return party, nil
+//	}
 
-func (ns *NSConn) replyPartyJoin(msg Message) {
-	if ns == nil {
-		msg.Err = errInvalidMethod
-		ns.Conn.Write(msg)
-		return
-	}
-
+func (ns *NSConn) askPartyCreate(msg Message) error {
 	if ns.Party != nil {
-		errors.New(fmt.Sprintf("You are already in party : %s", ns.Party.PartyID()))
+		//already in party
+		msg.Err = errors.New("you already in party")
 		ns.Conn.Write(msg)
-		return
+		return msg.Err
 	}
 
-	//OnPartyJoin event( check can join party ,...)
+	//fireEventCreateAndJoin
 	err := ns.events.fireEvent(ns, msg)
 	if err != nil {
 		b, ok := isReply(err)
 		if !ok {
 			msg.Err = err
 			ns.Conn.Write(msg)
-			return
+			return msg.Err
 		}
 
 		resp := msg
@@ -228,32 +224,110 @@ func (ns *NSConn) replyPartyJoin(msg Message) {
 		ns.Conn.Write(resp)
 	}
 
-	//when you don't handle OnJoinParty
+	//when you haven't handled the OnCreateParty
+	if ns.Party == nil {
+		ns.Party = NewParty("")
+	}
+
+	ns.Party.Create(ns)
+	ns.replyJoined()
+	return nil
+}
+
+func (ns *NSConn) askPartyInvite(msg Message) {
+	if ns.Party == nil {
+		msgCreate := msg
+		msgCreate.Event = OnPartyJoin
+		err := ns.askPartyCreate(msgCreate)
+		if err != nil {
+			msg.Err = errors.New("cannot invite at this time")
+			ns.Conn.Write(msg)
+			return
+		}
+	}
+
+	//fire event invite
+	err := ns.events.fireEvent(ns, msg)
+	if err != nil {
+		msg.Err = err
+		ns.Conn.Write(msg)
+		return
+	}
+}
+
+func (ns *NSConn) replyPartyAcceptInvite(msg Message) {
+	if ns.Party != nil {
+		//force leave current party
+		err := ns.replyPartyLeave(Message{
+			Namespace: ns.namespace,
+			Event:     OnPartyLeave,
+		})
+		if err != nil {
+			return
+		}
+	}
+
+	//fire event accept invite
+	err := ns.events.fireEvent(ns, msg)
+	if err != nil {
+		msg.Err = err
+		ns.Conn.Write(msg)
+		return
+	}
+
+	//join
+	msg.Event = OnPartyJoin
+	ns.replyPartyJoin(msg)
+}
+
+func (ns *NSConn) replyPartyJoin(msg Message) error {
+	if ns == nil {
+		msg.Err = errInvalidMethod
+		ns.Conn.Write(msg)
+		return msg.Err
+	}
+
+	if ns.Party != nil {
+		errors.New(fmt.Sprintf("You are already in party : %s", ns.Party.PartyID()))
+		ns.Conn.Write(msg)
+		return msg.Err
+	}
+
+	//OnPartyJoin event( check can join party ,...)
+	err := ns.events.fireEvent(ns, msg)
+	if err != nil {
+		msg.Err = err
+		ns.Conn.Write(msg)
+		return msg.Err
+	}
+
+	//when you haven't handled the OnJoinParty
 	if ns.Party == nil {
 		ns.Party = NewParty("")
 		ns.Party.Join(ns, nil)
 	}
 
-	msg.Event = OnPartyJoined
-	ns.events.fireEvent(ns, msg)
+	if ns.Party.Conn() == nil {
+		ns.Party.Join(ns, nil)
+	}
 
-	ns.Conn.Write(msg) //send back remote side msg OnPartyJoined
-	return
+	ns.replyJoined()
+	return nil
 }
 
 // remote request
-func (ns *NSConn) replyPartyLeave(msg Message) {
+func (ns *NSConn) replyPartyLeave(msg Message) error {
 	if ns == nil {
 		msg.Err = errInvalidMethod
 		ns.Conn.Write(msg)
-		return
+		return msg.Err
 	}
 
 	party := ns.Party
 	if party == nil {
 		msg.Err = errors.New("You are not in party ")
 		ns.Conn.Write(msg)
-		return
+		return msg.Err
 	}
 
 	// server-side, check for error on the local event first.
@@ -263,7 +337,7 @@ func (ns *NSConn) replyPartyLeave(msg Message) {
 		if !ok {
 			msg.Err = err
 			ns.Conn.Write(msg)
-			return
+			return msg.Err
 		}
 
 		resp := msg
@@ -280,7 +354,23 @@ func (ns *NSConn) replyPartyLeave(msg Message) {
 	ns.events.fireEvent(ns, msg)
 
 	ns.Conn.Write(msg) //send back remote side msg OnPartyLeft
-	return
+	return nil
+}
+
+func (ns *NSConn) replyJoined() {
+	partyInfo := ns.Party.PartyInfo()
+	if len(partyInfo) == 0 {
+		partyInfo = []byte(ns.Party.PartyID())
+	}
+
+	msg := Message{
+		Namespace: ns.namespace,
+		Event:     OnPartyJoined,
+		Body:      partyInfo,
+	}
+	ns.events.fireEvent(ns, msg)
+
+	ns.Conn.Write(msg)
 }
 
 func (ns *NSConn) FireEvent(msg Message) error {
