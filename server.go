@@ -580,7 +580,7 @@ func (s *Server) SBroadcast(channel string, msgs ...protos.ServerMessage) error 
 
 func (s *Server) AskServer(channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
 	//You cannot ask client in this case or ask more than 1 conn
-	if msg.ToClient || len(msg.To) != 1 {
+	if channel == msg.Namespace && len(msg.To) != 1 {
 		return nil, ErrInvalidPayload
 	}
 
