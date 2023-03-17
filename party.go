@@ -1,7 +1,6 @@
 package wolfsocket
 
 import (
-	"context"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	uuid "github.com/iris-contrib/go.uuid"
 )
@@ -11,11 +10,11 @@ type Party interface {
 	Subscribe(conn *NSConn)
 	Unsubscribe(conn *NSConn)
 
-	Broadcast(conn *NSConn, msg ...protos.ServerMessage)
+	Broadcast(msg ...protos.ServerMessage)
 
-	Create(ctx context.Context, nsConn *NSConn) error
-	Join(ctx context.Context, nsConn *NSConn) error
-	Leave(ctx context.Context) error
+	Create(nsConn *NSConn)
+	Join(nsConn *NSConn, playerInfo []byte)
+	Leave()
 }
 
 const prefixParty = "party."

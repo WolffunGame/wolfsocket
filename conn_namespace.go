@@ -210,9 +210,16 @@ func (ns *NSConn) replyPartyJoin(msg Message) {
 	//OnPartyJoin event( check can join party ,...)
 	err := ns.events.fireEvent(ns, msg)
 	if err != nil {
-		msg.Err = err
-		ns.Conn.Write(msg)
-		return
+		b, ok := isReply(err)
+		if !ok {
+			msg.Err = err
+			ns.Conn.Write(msg)
+			return
+		}
+
+		resp := msg
+		resp.Body = b
+		ns.Conn.Write(resp)
 	}
 
 	//when you don't handle OnJoinParty
@@ -246,9 +253,16 @@ func (ns *NSConn) replyPartyLeave(msg Message) {
 	// server-side, check for error on the local event first.
 	err := ns.events.fireEvent(ns, msg)
 	if err != nil {
-		msg.Err = err
-		ns.Conn.Write(msg)
-		return
+		b, ok := isReply(err)
+		if !ok {
+			msg.Err = err
+			ns.Conn.Write(msg)
+			return
+		}
+
+		resp := msg
+		resp.Body = b
+		ns.Conn.Write(resp)
 	}
 
 	//unsubscribe and broadcast left message all player this room
