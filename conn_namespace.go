@@ -200,29 +200,19 @@ func (ns *NSConn) replyPartyJoin(msg Message) error {
 	//OnPartyJoin event( check can join party ,...)
 	err := ns.events.fireEvent(ns, msg)
 	if err != nil {
-		if !msg.IsServer {
-			msg.Err = err
-			ns.Conn.Write(msg)
-		}
 		return err
 	}
 
+	//when you don't handle OnJoinParty
 	if ns.Party == nil {
-		if !msg.IsServer {
-			msg.Err = errors.New("join failed, recheck processing OnPartyJoin")
-			ns.Conn.Write(msg)
-		}
-		return ErrBadRoom
+		ns.Party = NewParty("")
+		ns.Party.Join(ns, nil)
 	}
 
-	ns.Party.Subscribe(ns)
-
-	msg.Event = OnRoomJoined
+	msg.Event = OnPartyJoined
 	ns.events.fireEvent(ns, msg)
 
-	if !msg.IsServer {
-		ns.Conn.writeEmptyReply("")
-	}
+	ns.Conn.Write(msg) //send back remote side msg OnPartyJoined
 	return nil
 }
 
@@ -234,50 +224,24 @@ func (ns *NSConn) replyPartyLeave(msg Message) error {
 
 	party := ns.Party
 	if party == nil {
-		if !msg.IsServer {
-			ns.Conn.writeEmptyReply("")
-		}
 		return ErrBadRoom
 	}
 
 	// server-side, check for error on the local event first.
 	err := ns.events.fireEvent(ns, msg)
 	if err != nil {
-		if !msg.IsServer {
-			msg.Err = err
-			ns.Conn.Write(msg)
-		}
 		return err
 	}
 
-	ns.Party.Unsubscribe(ns)
+	//unsubscribe and broadcast left message all player this room
+	party.Leave()
+	//reset party
 	ns.Party = nil
 
-	msg.Event = OnRoomLeft
-	ns.events.fireEvent(ns, msg)
-	if !msg.IsServer {
-		ns.Conn.writeEmptyReply(msg.wait)
-	}
-	return nil
-}
-
-// server ask
-func (ns *NSConn) askRoomLeave(ctx context.Context, msg Message) error {
-	if ns == nil {
-		return nil
-	}
-
-	err := ns.events.fireEvent(ns, msg)
-	if err != nil {
-		return err
-	}
-
-	ns.Party.Unsubscribe(ns)
-	ns.Party = nil
-
-	msg.Event = OnRoomLeft
+	msg.Event = OnPartyLeft
 	ns.events.fireEvent(ns, msg)
 
+	ns.Conn.Write(msg) //send back remote side msg OnPartyLeft
 	return nil
 }
 

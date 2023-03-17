@@ -47,21 +47,27 @@ var (
 	OnPartyJoin = "_OnPartyJoin"
 	// The OnPartyJoined is the event name that it's fired on after party join. */
 	OnPartyJoined = "_OnPartyJoined"
+	//notify Send information to the rest of the players in the party to update the UI -- RemoteSide
+	OnPartySomebodyJoined = "_OnPartySomebodyJoined"
+
 	// The OnPartyLeave is the event name that it's fired on before party leave. */
 	OnPartyLeave = "_OnPartyLeave"
 	// The OnPartyLeft is the event name that it's fired on after party leave. */
 	OnPartyLeft = "_OnPartyLeft"
+	//notify Send information to the rest of the players in the party to update the UI -- RemoteSide
+	OnPartySomebodyLeft = "_OnPartySomebodyLeft"
 )
 
 // IsSystemEvent reports whether the "event" is a system event,
 // OnNamespaceConnect, OnNamespaceConnected, OnNamespaceDisconnect,
 // OnRoomJoin, OnRoomJoined, OnRoomLeave and OnRoomLeft.
-// OnPartyJoin, OnPartyJoined, OnPartyLeave and OnPartyLef
+// OnPartyJoin, OnPartyJoined, OnPartyLeave and OnPartyLeft
 func IsSystemEvent(event string) bool {
 	switch event {
 	case OnNamespaceConnect, OnNamespaceConnected, OnNamespaceDisconnect,
 		OnRoomJoin, OnRoomJoined, OnRoomLeave, OnRoomLeft,
-		OnPartyJoin, OnPartyJoined, OnPartyLeave, OnPartyLeft:
+		OnPartyJoin, OnPartyJoined, OnPartyLeave, OnPartyLeft,
+		OnPartySomebodyJoined, OnPartySomebodyLeft:
 		return true
 	default:
 		return false
