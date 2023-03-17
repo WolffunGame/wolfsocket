@@ -147,6 +147,14 @@ func (ns *NSConn) Get(key string, value interface{}) (err error) {
 	return
 }
 
+func (ns *NSConn) Write(eventName string, body []byte) {
+	ns.Conn.Write(Message{
+		Namespace: ns.namespace,
+		Event:     eventName,
+		Body:      body,
+	})
+}
+
 // PARTY
 //func (ns *NSConn) CreateParty(ctx context.Context) (*BaseParty, error) {
 //	if ns == nil {
