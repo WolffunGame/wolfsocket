@@ -287,8 +287,14 @@ func (ns *NSConn) replyPartyAcceptInvite(msg Message) {
 	}
 
 	//join
-	msg.Event = OnPartyJoin
-	ns.replyPartyJoin(msg)
+	msgJoin := msg
+	msgJoin.Event = OnPartyJoin
+	err = ns.replyPartyJoin(msgJoin)
+	if err != nil {
+		msg.Err = err
+		ns.Conn.Write(msg)
+		return
+	}
 }
 
 func (ns *NSConn) replyPartyJoin(msg Message) error {
