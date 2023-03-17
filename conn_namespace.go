@@ -387,6 +387,7 @@ func (ns *NSConn) replyJoined() {
 		Namespace: ns.namespace,
 		Event:     OnPartyJoined,
 		Body:      partyInfo,
+		SetBinary: true,
 	}
 	ns.events.fireEvent(ns, msg)
 
