@@ -81,7 +81,7 @@ func (p *BaseParty) Join(nsConn *NSConn, playerInfo []byte) error {
 		ToClient:  true,
 
 		//skip sender
-		From:         p.conn.ID(),
+		From:         p.conn.Conn.serverConnID,
 		ExceptSender: true,
 	})
 
@@ -101,7 +101,7 @@ func (p *BaseParty) Leave() error {
 		ToClient:  true,
 
 		//skip sender
-		From:         p.conn.ID(),
+		From:         p.conn.Conn.serverConnID,
 		ExceptSender: true,
 	})
 
