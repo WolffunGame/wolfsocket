@@ -43,6 +43,7 @@ var (
 	// This event should be defined under an empty namespace in order this to work.
 	OnNativeMessage = "_OnNativeMessage"
 
+	OnPartyCreate = "_OnPartyCreate"
 	// The OnPartyJoin is the event name that it's fired on before party join. */
 	OnPartyJoin = "_OnPartyJoin"
 	// The OnPartyJoined is the event name that it's fired on after party join. */
@@ -56,6 +57,12 @@ var (
 	OnPartyLeft = "_OnPartyLeft"
 	//notify Send information to the rest of the players in the party to update the UI -- RemoteSide
 	OnPartySomebodyLeft = "_OnPartySomebodyLeft"
+
+	OnPartyInvite = "_OnPartyInvite"
+
+	OnPartyAcceptInvite = "_OnPartyAcceptInvite"
+
+	OnPartyReceiveMessageInvite = "_OnPartyReceiveMessageInvite"
 )
 
 // IsSystemEvent reports whether the "event" is a system event,
