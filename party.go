@@ -16,6 +16,8 @@ type Party interface {
 	Create(nsConn *NSConn) error
 	Join(nsConn *NSConn, playerInfo []byte) error
 	Leave() error
+
+	PartyInfo() []byte
 }
 
 const prefixParty = "party."
@@ -26,7 +28,7 @@ type BaseParty struct {
 	conn *NSConn
 }
 
-func NewParty(partyID string) *BaseParty {
+func NewParty(partyID string) Party {
 	if partyID == "" {
 		partyID = genID()
 	}
@@ -38,6 +40,7 @@ func NewParty(partyID string) *BaseParty {
 func genID() string {
 	return uuid.Must(uuid.NewV4()).String()
 }
+
 func (p *BaseParty) Conn() *NSConn {
 	return p.conn
 }
@@ -101,4 +104,9 @@ func (p *BaseParty) Leave() error {
 
 func (p *BaseParty) getChannel() string {
 	return prefixParty + p.ID
+}
+
+func (p *BaseParty) PartyInfo() []byte {
+	//TODO implement me
+	return []byte{}
 }
