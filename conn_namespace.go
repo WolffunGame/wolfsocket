@@ -359,28 +359,31 @@ func (ns *NSConn) askPartyLeave(msg Message) error {
 	// server-side, check for error on the local event first.
 	err := ns.events.fireEvent(ns, msg)
 	if err != nil {
-		b, ok := isReply(err)
-		if !ok {
-			msg.Err = err
-			ns.Conn.Write(msg)
-			return msg.Err
-		}
-
-		resp := msg
-		resp.Body = b
-		ns.Conn.Write(resp)
+		msg.Err = err
+		ns.Conn.Write(msg)
+		return msg.Err
 	}
 
 	//unsubscribe and broadcast left message all player this room
 	party.Leave()
 	//reset party
 	ns.Party = nil
+	//reply leave
+	ns.Conn.Write(msg)
 
-	msg.Event = OnPartyLeft
-	ns.events.fireEvent(ns, msg)
+	ns.replyLeft()
 
-	ns.Conn.Write(msg) //send back remote side msg OnPartyLeft
 	return nil
+}
+
+func (ns *NSConn) replyLeft() {
+	msg := Message{
+		Namespace: ns.namespace,
+		Event:     OnPartyLeft,
+		SetBinary: true,
+	}
+	ns.events.fireEvent(ns, msg)
+	ns.Conn.Write(msg) //send back remote side msg OnPartyLeft
 }
 
 func (ns *NSConn) replyJoined() {
