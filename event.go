@@ -63,6 +63,9 @@ var (
 	OnPartyAcceptInvite = "_OnPartyAcceptInvite"
 
 	OnPartyReceiveMessageInvite = "_OnPartyReceiveMessageInvite"
+
+	OnChat           = "_OnChat"
+	OnReceiveMsgChat = "_ReceiveMsgChat"
 )
 
 // IsSystemEvent reports whether the "event" is a system event,
