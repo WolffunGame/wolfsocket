@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"reflect"
+	"sync"
 )
 
 // NSConn describes a connection connected to a specific namespace,
@@ -32,6 +33,9 @@ type NSConn struct {
 	value reflect.Value
 
 	Party Party
+
+	roomsChatMutex sync.RWMutex
+	roomsChat      map[RoomChannel]RoomChat
 }
 
 func newNSConn(c *Conn, namespace string, events Events) *NSConn {
@@ -40,6 +44,7 @@ func newNSConn(c *Conn, namespace string, events Events) *NSConn {
 		namespace: namespace,
 		events:    events,
 		//rooms:     make(map[string]*Room),
+		roomsChat: make(map[RoomChannel]RoomChat),
 	}
 }
 

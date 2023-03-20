@@ -11,6 +11,8 @@ func (ns *NSConn) forceLeaveAll() {
 		Namespace: ns.namespace,
 		Event:     OnPartyLeave,
 	})
+
+	ns.leaveAllRoomChat()
 }
 
 func (ns *NSConn) askPartyCreate(msg Message) error {
@@ -191,7 +193,8 @@ func (ns *NSConn) replyLeft() {
 		SetBinary: true,
 	}
 	ns.events.fireEvent(ns, msg)
-	ns.Conn.Write(msg) //send back remote side msg OnPartyLeft
+	ns.LeaveRoomChat(PartyChatRoom) //leave room chat
+	ns.Conn.Write(msg)              //send back remote side msg OnPartyLeft
 }
 
 func (ns *NSConn) replyJoined() {
@@ -207,6 +210,8 @@ func (ns *NSConn) replyJoined() {
 		SetBinary: true,
 	}
 	ns.events.fireEvent(ns, msg)
+	//join room chat
+	ns.JoinRoomChat(NewRoomChat(ns.Party.PartyID(), PartyChatRoom, ns))
 
 	ns.Conn.Write(msg)
 }
