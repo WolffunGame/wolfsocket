@@ -4,8 +4,8 @@ import (
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 )
 
-type RoomChannel string //country - party - lobby,...
-var PartyChatRoom RoomChannel = "party"
+type RoomChannel uint32 //country - party - lobby,...
+var PartyChatRoom RoomChannel = 1
 
 type RoomChat interface {
 	Conn() *NSConn
