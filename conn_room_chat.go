@@ -1,5 +1,7 @@
 package wolfsocket
 
+import "errors"
+
 func (ns *NSConn) RoomChat(roomChannel RoomChannel) RoomChat {
 	if ns == nil {
 		return nil
@@ -20,7 +22,7 @@ func (ns *NSConn) JoinRoomChat(room RoomChat) error {
 	ns.roomsChatMutex.Lock()
 	defer ns.roomsChatMutex.Unlock()
 	if _, exists := ns.roomsChat[room.Channel()]; exists {
-		return errors.New("You are already in this room chat channel")
+		return errors.New("You are already in this room chat channel ")
 	}
 	ns.roomsChat[room.Channel()] = room
 	room.Subscribe()
@@ -36,7 +38,7 @@ func (ns *NSConn) LeaveRoomChat(roomChannel RoomChannel) error {
 	defer ns.roomsChatMutex.Unlock()
 	room, exists := ns.roomsChat[roomChannel]
 	if !exists {
-		return errors.New("You arenot already in this room chat channel")
+		return errors.New("You aren't in this room chat channel ")
 	}
 	room.Unsubscribe()
 	delete(ns.roomsChat, roomChannel)
