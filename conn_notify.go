@@ -6,7 +6,7 @@ const notifyKey = "notify."
 
 func (nsConn *NSConn) SubscribeNotify(friendIDs ...string) {
 	for _, friendID := range friendIDs {
-		nsConn.server().StackExchange.Subscribe(nsConn.Conn, getKeyNotify(friendID))
+		nsConn.Subscribe(getKeyNotify(friendID))
 	}
 }
 func (nsConn *NSConn) Notify(msgs ...protos.ServerMessage) error {
