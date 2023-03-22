@@ -216,6 +216,7 @@ func (exc *StackExchange) run() {
 				sub.mu.RUnlock()
 				if ok {
 					subscription.Unsubscribe()
+					delete(sub.subscriptions, subject)
 				}
 			}
 		case m := <-exc.delSubscriber:
