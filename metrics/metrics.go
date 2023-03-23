@@ -3,37 +3,36 @@ package metrics
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"net/http"
 	"time"
 )
 
 var defaultMetrics *Metrics
 
 type Metrics struct {
-	clients               prometheus.Gauge
-	subs                  *prometheus.GaugeVec
-	readLatencyHistogram  *prometheus.HistogramVec
-	writeLatencyHistogram *prometheus.HistogramVec
+	clients                   prometheus.Gauge
+	subs                      *prometheus.GaugeVec
+	readWriteLatencyHistogram *prometheus.HistogramVec
 }
 
-func Enable() http.Handler {
+func Registerer() prometheus.Registerer {
+	return registerMetrics()
+}
+
+func registerMetrics() *prometheus.Registry {
+
 	defaultMetrics = &Metrics{}
-	registerMetrics()
+	//new registry
+	registry := prometheus.NewRegistry()
+	factory := promauto.With(registry)
 
-	//default register
-	return promhttp.Handler()
-}
-
-func registerMetrics() {
-	defaultMetrics.clients = promauto.NewGauge(
+	defaultMetrics.clients = factory.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "thetan_multiplayer_hub_clients_count",
 			Help: "Number of clients currently connected",
 		},
 	)
 
-	defaultMetrics.subs = promauto.NewGaugeVec(
+	defaultMetrics.subs = factory.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "thetan_multiplayer_hub_subscriptions_count",
 			Help: "Number of user subscribed to a topic",
@@ -41,14 +40,16 @@ func registerMetrics() {
 		[]string{"type", "topic"},
 	)
 
-	defaultMetrics.readLatencyHistogram = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "websocket_read_latency_seconds",
-			Help:    "Latency of websocket read operations in seconds.",
-			Buckets: []float64{0.01, 0.05, 0.1, 0.5, 1, 5},
-		},
-		[]string{"operation"},
-	)
+	defaultMetrics.readWriteLatencyHistogram =
+		factory.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "websocket_read_write_latency_seconds",
+				Help:    "Latency of websocket read-write operations in seconds.",
+				Buckets: []float64{0.01, 0.05, 0.1, 0.5, 1, 5},
+			},
+			[]string{"operation"},
+		)
+	return registry
 }
 
 func RecordHubClientNew() {
@@ -84,12 +85,12 @@ func RecordReadLatencyMessage(startTime time.Time) {
 		return
 	}
 
-	defaultMetrics.readLatencyHistogram.WithLabelValues("read").Observe(time.Since(startTime).Seconds())
+	defaultMetrics.readWriteLatencyHistogram.WithLabelValues("read").Observe(time.Since(startTime).Seconds())
 }
 func RecordWriteLatencyMessage(startTime time.Time) {
 	if defaultMetrics == nil {
 		return
 	}
 
-	defaultMetrics.writeLatencyHistogram.WithLabelValues("write").Observe(time.Since(startTime).Seconds())
+	defaultMetrics.readWriteLatencyHistogram.WithLabelValues("write").Observe(time.Since(startTime).Seconds())
 }
