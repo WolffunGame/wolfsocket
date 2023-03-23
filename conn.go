@@ -3,6 +3,7 @@ package wolfsocket
 import (
 	"context"
 	"errors"
+	"github.com/WolffunGame/wolfsocket/metrics"
 	"net"
 	"net/http"
 	"sync"
@@ -322,7 +323,9 @@ func (c *Conn) startReader() {
 	// CLIENT is ready when ACK done
 	// SERVER is ready when ACK is done AND `Server#OnConnected` returns with nil error.
 	for {
+		startTime := time.Now()
 		b, msgTyp, err := c.socket.ReadData(c.readTimeout)
+		metrics.RecordReadLatencyMessage(startTime)
 		if err != nil {
 			c.readiness.unwait(err)
 			return
@@ -843,6 +846,7 @@ func (c *Conn) replyDisconnect(msg Message) {
 }
 
 func (c *Conn) write(b []byte, binary bool) bool {
+	defer metrics.RecordWriteLatencyMessage(time.Now())
 	var err error
 	if binary {
 		err = c.socket.WriteBinary(b, c.writeTimeout)
