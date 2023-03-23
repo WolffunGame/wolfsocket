@@ -2,8 +2,8 @@ package wolfsocket
 
 import (
 	"errors"
-	"fmt"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
+	"github.com/WolffunGame/wolfsocket/wserror"
 )
 
 func (ns *NSConn) forceLeaveAll() {
@@ -123,7 +123,7 @@ func (ns *NSConn) replyPartyJoin(msg Message) error {
 	}
 
 	if ns.Party != nil {
-		msg.Err = errors.New(fmt.Sprintf("You are already in party : %s", ns.Party.PartyID()))
+		msg.Err = wserror.AlreadyInParty.WSErr("You are already in party", ns.Party.PartyID())
 		ns.Conn.Write(msg)
 		return msg.Err
 	}

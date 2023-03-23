@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/WolffunGame/wolfsocket/wserror"
 	"strconv"
 	"strings"
 	"time"
@@ -316,7 +317,8 @@ func serializeOutput(wait, namespace, room, event string,
 		if b, ok := isReply(err); ok {
 			body = b
 		} else {
-			body = []byte(err.Error())
+			//body = []byte(err.Error())
+			body = wserror.Error(err).Bytes()
 			isErrorByte = trueByte
 		}
 	}
