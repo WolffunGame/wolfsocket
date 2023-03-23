@@ -14,7 +14,7 @@ type Metrics struct {
 	readWriteLatencyHistogram *prometheus.HistogramVec
 }
 
-func Registerer() prometheus.Registerer {
+func Registerer() *prometheus.Registry {
 	return registerMetrics()
 }
 
@@ -22,7 +22,7 @@ func registerMetrics() *prometheus.Registry {
 
 	defaultMetrics = &Metrics{}
 	//new registry
-	registry := prometheus.NewRegistry()
+	registry := prometheus.DefaultRegisterer
 	factory := promauto.With(registry)
 
 	defaultMetrics.clients = factory.NewGauge(
@@ -49,7 +49,7 @@ func registerMetrics() *prometheus.Registry {
 			},
 			[]string{"operation"},
 		)
-	return registry
+	return registry.(*prometheus.Registry)
 }
 
 func RecordHubClientNew() {
