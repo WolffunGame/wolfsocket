@@ -27,7 +27,7 @@ func registerMetrics() *prometheus.Registry {
 
 	defaultMetrics.clients = factory.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "thetan_multiplayer_hub_clients_count",
+			Name: "thetan_multiplayer_hub_clients_connections_open",
 			Help: "Number of clients currently connected",
 		},
 	)
