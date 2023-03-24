@@ -66,18 +66,18 @@ func RecordHubClientClose() {
 	defaultMetrics.clients.Dec()
 }
 
-func RecordHubSubscription(typ, topic string) {
+func RecordHubSubscription(topic string) {
 	if defaultMetrics == nil {
 		return
 	}
-	defaultMetrics.subs.WithLabelValues(typ, topic).Inc()
+	defaultMetrics.subs.WithLabelValues(topic).Inc()
 }
 
-func RecordHubUnsubscription(typ, topic string) {
+func RecordHubUnsubscription(topic string) {
 	if defaultMetrics == nil {
 		return
 	}
-	defaultMetrics.subs.WithLabelValues(typ, topic).Dec()
+	defaultMetrics.subs.WithLabelValues(topic).Dec()
 }
 
 func RecordReadLatencyMessage(startTime time.Time) {

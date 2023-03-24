@@ -3,6 +3,7 @@ package nats
 import (
 	"context"
 	"errors"
+	"github.com/WolffunGame/wolfsocket/metrics"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"github.com/golang/protobuf/proto"
 	"strings"
@@ -184,6 +185,11 @@ func (exc *StackExchange) run() {
 				if err != nil {
 					continue
 				}
+				channel := strings.Split(m.channel, ".")
+				if len(channel) > 1 {
+					//Record prefix (party, chat,notify,..)
+					metrics.RecordHubSubscription(channel[0])
+				}
 				sub.subConn.Flush()
 				if err = sub.subConn.LastError(); err != nil {
 					// wolfsocket.Debugf("[%s] OnSubscribe [%s] Last Error: %v", m.conn, subject, err)
@@ -217,6 +223,12 @@ func (exc *StackExchange) run() {
 				if ok {
 					subscription.Unsubscribe()
 					delete(sub.subscriptions, subject)
+
+					channel := strings.Split(m.channel, ".")
+					if len(channel) > 1 {
+						//record prefix
+						metrics.RecordHubUnsubscription(channel[0])
+					}
 				}
 			}
 		case m := <-exc.delSubscriber:
