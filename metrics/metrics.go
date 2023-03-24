@@ -37,13 +37,13 @@ func registerMetrics() *prometheus.Registry {
 			Name: "thetan_multiplayer_hub_subscriptions_count",
 			Help: "Number of user subscribed to a topic",
 		},
-		[]string{"type", "topic"},
+		[]string{"topic"},
 	)
 
 	defaultMetrics.readWriteLatencyHistogram =
 		factory.NewHistogramVec(
 			prometheus.HistogramOpts{
-				Name:    "websocket_read_write_latency_seconds",
+				Name:    "thetan_multiplayer_hub_read_write_latency_seconds",
 				Help:    "Latency of websocket read-write operations in seconds.",
 				Buckets: []float64{0.01, 0.05, 0.1, 0.5, 1, 5},
 			},
