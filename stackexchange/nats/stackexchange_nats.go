@@ -123,8 +123,8 @@ func NewStackExchange(config StackExchangeCfgs, options ...nats.Option) (*StackE
 		config.URL = nats.DefaultURL
 	}
 	opts.Url = config.URL
-	opts.Name = config.URL
-	opts.Password = config.URL
+	opts.Name = config.UserName
+	opts.Password = config.Pass
 	// and set that:
 	// opts.Verbose = true
 
