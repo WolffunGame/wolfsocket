@@ -3,6 +3,7 @@ package nats
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/WolffunGame/wolfsocket/metrics"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"github.com/golang/protobuf/proto"
@@ -244,8 +245,9 @@ func (exc *StackExchange) run() {
 	}
 }
 
+// SubjectPrefix.type.id
 func (exc *StackExchange) getChannel(key string) string {
-	return exc.SubjectPrefix + key
+	return fmt.Sprintf("%s.%s", exc.SubjectPrefix, key)
 }
 
 func (exc StackExchange) makeMsgHandler(c *wolfsocket.Conn) nats.MsgHandler {
