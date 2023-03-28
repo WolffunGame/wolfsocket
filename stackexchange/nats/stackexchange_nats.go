@@ -17,8 +17,10 @@ import (
 )
 
 type StackExchangeCfgs struct {
-	URL     string
-	Channel string
+	URL      string
+	UserName string
+	Pass     string
+	Channel  string
 	//wolfsocket.Namespaces
 	//*wolfsocket.Server
 }
@@ -121,6 +123,8 @@ func NewStackExchange(config StackExchangeCfgs, options ...nats.Option) (*StackE
 		config.URL = nats.DefaultURL
 	}
 	opts.Url = config.URL
+	opts.Name = config.URL
+	opts.Password = config.URL
 	// and set that:
 	// opts.Verbose = true
 
