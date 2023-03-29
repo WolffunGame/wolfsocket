@@ -13,7 +13,7 @@ import (
 
 	"github.com/WolffunGame/wolfsocket"
 
-	"github.com/nats-io/nats.go"
+	. "github.com/nats-io/nats.go"
 )
 
 type StackExchangeCfgs struct {
@@ -21,15 +21,14 @@ type StackExchangeCfgs struct {
 	wolfsocket.Namespaces
 	*wolfsocket.Server
 }
-type NatsOption nats.Option
 
 // StackExchange is a `wolfsocket.StackExchange` for nats
 // based on https://nats-io.github.io/docs/developer/tutorials/pubsub.html.
 type StackExchange struct {
 	// options holds the nats options for clients.
-	// Defaults to the `nats.GetDefaultOptions()` which
+	// Defaults to the `GetDefaultOptions()` which
 	// can be overridden by the `With` function on `NewStackExchange`.
-	opts nats.Options
+	opts Options
 	// If you use the same nats server instance for multiple wolfsocket apps,
 	// set this to different values across your apps.
 	SubjectPrefix string
@@ -37,7 +36,7 @@ type StackExchange struct {
 	neffosServer *wolfsocket.Server
 	namespaces   wolfsocket.Namespaces
 
-	publisher   *nats.Conn
+	publisher   *Conn
 	subscribers map[*wolfsocket.Conn]*subscriber
 
 	addSubscriber chan *subscriber
@@ -51,12 +50,12 @@ var _ wolfsocket.StackExchange = (*StackExchange)(nil)
 type (
 	subscriber struct {
 		conn    *wolfsocket.Conn
-		subConn *nats.Conn
+		subConn *Conn
 
 		// To unsubscribe a connection per namespace, set on subscribe channel.
 		// Key is the subject pattern, with lock for any case, although
 		// they shouldn't execute in parallel from wolfsocket conn itself.
-		subscriptions map[string]*nats.Subscription
+		subscriptions map[string]*Subscription
 		mu            sync.RWMutex
 	}
 
@@ -75,14 +74,14 @@ type (
 	}
 )
 
-// With accepts a nats.Options structure
+// With accepts a Options structure
 // which contains the whole configuration
-// and returns a nats.Option which can be passed
+// and returns a Option which can be passed
 // to the `NewStackExchange`'s second input variadic argument.
 // Note that use this method only when you want to override the default options
 // at once.
-func With(options nats.Options) nats.Option {
-	return func(opts *nats.Options) error {
+func With(options Options) Option {
+	return func(opts *Options) error {
 		*opts = options
 		return nil
 	}
@@ -92,23 +91,23 @@ func With(options nats.Options) nats.Option {
 // The required field is "url" which should be in the form
 // of nats connection string, e.g. nats://username:pass@localhost:4222.
 // Other option is to leave the url with localhost:4222 and pass
-// authentication options such as `nats.UserInfo(username, pass)` or
-// nats.UserCredentials("./userCredsFile") at the second variadic input argument.
+// authentication options such as `UserInfo(username, pass)` or
+// UserCredentials("./userCredsFile") at the second variadic input argument.
 //
 // Options can be used to register nats error and close handlers too.
 //
-// Alternatively, use the `With(nats.Options)` function to
+// Alternatively, use the `With(Options)` function to
 // customize the client through struct fields.
-func NewStackExchange(cfg StackExchangeCfgs, options ...NatsOption) (*StackExchange, error) {
+func NewStackExchange(cfg StackExchangeCfgs, options ...Option) (*StackExchange, error) {
 	// For subscribing:
 	// Use a single client or create new for each new incoming websocket connection?
 	// - nats does not have a connection pool and
 	// - it uses callbacks for subscribers and
 	// so I assumed it's tend to be uses as single client BUT inside its source code:
-	// - the connect itself is done under its nats.go/Conn.connect()
+	// - the connect itself is done under its go/Conn.connect()
 	// - the reading is done through loop waits for each server message
 	//   and it parses and stores field data using connection-level locks.
-	// - and the subscriber at nats.go/Conn#waitForMsgs(s *Subscription) for channel use
+	// - and the subscriber at go/Conn#waitForMsgs(s *Subscription) for channel use
 	// also uses connection-level locks. ^ this is slower than callbacks,
 	// callbacks are more low level there as far as my research goes.
 	// So I will proceed with making a new nats connection for each websocket connection,
@@ -119,7 +118,7 @@ func NewStackExchange(cfg StackExchangeCfgs, options ...NatsOption) (*StackExcha
 
 	// Cache the options to be used on every client and
 	// respect any customization by caller.
-	opts := nats.GetDefaultOptions()
+	opts := GetDefaultOptions()
 	opts.NoEcho = true
 
 	for _, opt := range options {
@@ -132,7 +131,7 @@ func NewStackExchange(cfg StackExchangeCfgs, options ...NatsOption) (*StackExcha
 	}
 
 	if opts.Url == "" {
-		opts.Url = nats.DefaultURL
+		opts.Url = DefaultURL
 	}
 
 	// opts.Url may change from caller, use the struct's field to respect it.
@@ -202,7 +201,7 @@ func (exc *StackExchange) run() {
 
 				sub.mu.Lock()
 				if sub.subscriptions == nil {
-					sub.subscriptions = make(map[string]*nats.Subscription)
+					sub.subscriptions = make(map[string]*Subscription)
 				}
 				sub.subscriptions[subject] = subscription
 				sub.mu.Unlock()
@@ -253,15 +252,15 @@ func (exc *StackExchange) getChannel(key string) string {
 	return fmt.Sprintf("%s.%s", exc.SubjectPrefix, key)
 }
 
-func (exc StackExchange) makeMsgHandler(c *wolfsocket.Conn) nats.MsgHandler {
-	//return func(m *nats.Msg) {
+func (exc StackExchange) makeMsgHandler(c *wolfsocket.Conn) MsgHandler {
+	//return func(m *Msg) {
 	//	msg := c.DeserializeMessage(wolfsocket.TextMessage, m.Data)
 	//	msg.FromStackExchange = true
 	//
 	//	c.Write(msg)
 	//}
 
-	return func(msg *nats.Msg) {
+	return func(msg *Msg) {
 		exc.handleMessage(msg, c)
 	}
 }
@@ -287,7 +286,7 @@ func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
 	return nil
 }
 
-func (exc *StackExchange) handleMessage(natsMsg *nats.Msg, conn *wolfsocket.Conn) (err error) {
+func (exc *StackExchange) handleMessage(natsMsg *Msg, conn *wolfsocket.Conn) (err error) {
 	if natsMsg == nil {
 		//log
 		return
@@ -356,7 +355,7 @@ func (exc *StackExchange) Reply(err error, token string) error {
 	return exc.publishCommand(channel, data)
 }
 
-// Publish publishes messages through nats.
+// Publish publishes messages through
 // It's called automatically on wolfsocket broadcasting.
 //func (exc *StackExchange) Publish(msgs []wolfsocket.Message) bool {
 //	for _, msg := range msgs {
@@ -383,7 +382,7 @@ func (exc *StackExchange) publishCommand(channel string, b []byte) error {
 //	return err == nil
 //}
 
-// Ask implements server Ask for nats. It blocks.
+// Ask implements server Ask for  It blocks.
 func (exc *StackExchange) Ask(ctx context.Context, msg wolfsocket.Message, token string) (response wolfsocket.Message, err error) {
 	// for some reason we can't use the exc.publisher.Subscribe,
 	// so create a new connection for subscription which will be terminated on message receive or timeout.
@@ -394,7 +393,7 @@ func (exc *StackExchange) Ask(ctx context.Context, msg wolfsocket.Message, token
 	//}
 	//
 	//ch := make(chan wolfsocket.Message)
-	//sub, err := subConn.Subscribe(token, func(m *nats.Msg) {
+	//sub, err := subConn.Subscribe(token, func(m *Msg) {
 	//	ch <- wolfsocket.DeserializeMessage(wolfsocket.TextMessage, m.Data, false, false)
 	//})
 	//
@@ -493,7 +492,7 @@ func (exc *StackExchange) AskServer(channel string, msg protos.ServerMessage) (r
 	defer subConn.Close()
 
 	//chan receive message nats
-	msgChan := make(chan *nats.Msg, 1)
+	msgChan := make(chan *Msg, 1)
 	defer close(msgChan)
 
 	_, _ = subConn.ChanSubscribe(exc.getChannel(msg.Token), msgChan)
@@ -518,13 +517,13 @@ func (exc *StackExchange) AskServer(channel string, msg protos.ServerMessage) (r
 }
 
 //func (exc *StackExchange) serverPubSub(namespaces wolfsocket.Namespaces) {
-//	ch := make(chan *nats.Msg, 100)
+//	ch := make(chan *Msg, 100)
 //	subConn, err := exc.opts.Connect()
 //	if err != nil {
 //		log.Fatal("Cannot Subscribe namespace channel")
 //	}
 //	for namespace, _ := range namespaces {
-//		sub, err := subConn.Subscribe(exc.getChannel(namespace), func(msg *nats.Msg) {
+//		sub, err := subConn.Subscribe(exc.getChannel(namespace), func(msg *Msg) {
 //			ch <- msg
 //		})
 //		subConn.ChanSubscribe()
