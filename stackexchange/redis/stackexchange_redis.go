@@ -27,7 +27,7 @@ type StackExchangeCfgs struct {
 
 // StackExchange is a `wolfsocket.StackExchange` for redis.
 type StackExchange struct {
-	channel string
+	prefixChannel string
 
 	client Client
 
@@ -68,7 +68,7 @@ type (
 var _ wolfsocket.StackExchange = (*StackExchange)(nil)
 
 // NewStackExchange returns a new redis StackExchange.
-// The "channel" input argument is the channel prefix for publish and subscribe.
+// The "prefixChannel" input argument is the channel prefix for publish and subscribe.
 func NewStackExchange(cfg StackExchangeCfgs) (*StackExchange, error) {
 	rdb := redis.NewUniversalClient(&cfg.RedisConfig)
 	exc := &StackExchange{
@@ -78,9 +78,9 @@ func NewStackExchange(cfg StackExchangeCfgs) (*StackExchange, error) {
 		// Otherwise a message sent from one server to all of its own clients will go
 		// to all clients of all wolfsocket servers that use the redis server.
 		// We could use multiple channels but overcomplicate things here.
-		channel:      cfg.Channel,
-		namespaces:   cfg.Namespaces,
-		neffosServer: cfg.Server,
+		prefixChannel: cfg.Channel,
+		namespaces:    cfg.Namespaces,
+		neffosServer:  cfg.Server,
 
 		subscribers:   make(map[*wolfsocket.Conn]*subscriber),
 		addSubscriber: make(chan *subscriber),
@@ -151,7 +151,7 @@ func (exc *StackExchange) serverPubSub(namespaces wolfsocket.Namespaces) {
 		select {
 		case msg := <-ch:
 			// Handle the message
-			namespace := strings.TrimPrefix(msg.Channel, prefixChannel)
+			namespace := strings.TrimPrefix(msg.Channel, exc.prefixChannel)
 			if event, ok := namespaces[namespace]; ok {
 				_ = exc.handleServerMessage(namespace, msg.Payload, event)
 			}
@@ -172,7 +172,7 @@ func (exc *StackExchange) serverPubSub(namespaces wolfsocket.Namespaces) {
 //	if connID != "" {
 //		// publish direct and let the server-side do the checks
 //		// of valid or invalid message to send on this particular client.
-//		return exc.channel + "." + connID + "."
+//		return exc.prefixChannel + "." + connID + "."
 //	}
 //
 //	panic("connID cannot be empty")
@@ -182,7 +182,7 @@ func (exc *StackExchange) serverPubSub(namespaces wolfsocket.Namespaces) {
 //	//	//should never happen but give info for debugging.
 //	//	panic("namespace cannot be empty when sending to a namespace's room")
 //	//}
-//	//return exc.channel + "." + namespace + "."
+//	//return exc.prefixChannel + "." + namespace + "."
 //}
 
 // OnConnect prepares the connection redis subscriber
@@ -299,8 +299,9 @@ func (exc *StackExchange) OnDisconnect(c *wolfsocket.Conn) {
 	exc.delSubscriber <- closeAction{conn: c}
 }
 
+// SubjectPrefix.type.id
 func (exc *StackExchange) getChannel(key string) string {
-	return prefixChannel + key
+	return fmt.Sprintf("%s.%s", exc.prefixChannel, key)
 }
 
 func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocket.Conn) (err error) {
@@ -486,6 +487,4 @@ var (
 	// that does not match the expected prefix is received during subscription.
 	// The message is not executed to prevent unauthorized access or incorrect behavior.
 	InvalidPrefix = errors.New("message received with invalid prefix")
-
-	prefixChannel = "WSServer."
 )
