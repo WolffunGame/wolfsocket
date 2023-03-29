@@ -299,8 +299,9 @@ func (exc *StackExchange) OnDisconnect(c *wolfsocket.Conn) {
 	exc.delSubscriber <- closeAction{conn: c}
 }
 
+// SubjectPrefix.type.id
 func (exc *StackExchange) getChannel(key string) string {
-	return exc.prefixChannel + key
+	return fmt.Sprintf("%s.%s", exc.prefixChannel, key)
 }
 
 func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocket.Conn) (err error) {

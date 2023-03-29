@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/WolffunGame/wolfsocket/metrics"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"net/http"
 	"strconv"
@@ -179,12 +180,14 @@ func (s *Server) start() {
 			s.connections[c] = struct{}{}
 			s.connsByID[c.serverConnID] = c
 			atomic.AddUint64(&s.count, 1)
+			metrics.RecordHubClientNew()
 		case c := <-s.disconnect:
 			if _, ok := s.connections[c]; ok {
 				// close(c.out)
 				delete(s.connections, c)
 				delete(s.connsByID, c.serverConnID)
 				atomic.AddUint64(&s.count, ^uint64(0))
+				metrics.RecordHubClientClose()
 				// println("disconnect...")
 				if s.OnDisconnect != nil {
 					// don't fire disconnect if was immediately closed on the `OnConnect` server event.

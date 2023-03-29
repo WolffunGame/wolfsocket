@@ -2,9 +2,15 @@ package wolfsocket
 
 import (
 	"errors"
-	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"github.com/WolffunGame/wolfsocket/wserror"
 )
+
+var forcedJoin = false
+
+// Forced to join a new group when already in another group
+func SetForcedJoin(isForced bool) {
+	forcedJoin = isForced
+}
 
 func (ns *NSConn) forceLeaveAll() {
 	ns.askPartyLeave(Message{
@@ -70,19 +76,21 @@ func (ns *NSConn) askPartyInvite(msg Message) {
 		return
 	}
 
-	receiverID := string(msg.Body)
-	if len(receiverID) > 0 {
-		//body must is connID receive invite message
-		ns.SBroadcast(receiverID, protos.ServerMessage{
-			Namespace: ns.Namespace(),
-			EventName: OnPartyReceiveMessageInvite,
-			Body:      []byte(ns.Party.PartyID()),
-			ToClient:  true,
-		})
-	}
+	//ai handle nay gui data
+	//receiverID := string(msg.Body)
+	//if len(receiverID) > 0 {
+	//	//body must is connID receive invite message
+	//	ns.SBroadcast(receiverID, protos.ServerMessage{
+	//		Namespace: ns.Namespace(),
+	//		EventName: OnPartyReceiveMessageInvite,
+	//		Body:      []byte(ns.Party.PartyID()),
+	//		ToClient:  true,
+	//	})
+	//}
+	ns.Conn.writeEmptyReply(msg.wait)
 }
 
-func (ns *NSConn) replyPartyAcceptInvite(msg Message) {
+func (ns *NSConn) replyPartyReplyInvitation(msg Message) {
 	if ns.Party != nil {
 		//force leave current party
 		err := ns.askPartyLeave(Message{
@@ -123,9 +131,21 @@ func (ns *NSConn) replyPartyJoin(msg Message) error {
 	}
 
 	if ns.Party != nil {
-		msg.Err = wserror.AlreadyInParty.WSErr("You are already in party", ns.Party.PartyID())
-		ns.Conn.Write(msg)
-		return msg.Err
+		if !forcedJoin {
+			msg.Err = wserror.AlreadyInParty.WSErr("You are already in party", ns.Party.PartyID())
+			ns.Conn.Write(msg)
+			return msg.Err
+		}
+		//leave current joined party
+		err := ns.askPartyLeave(Message{
+			Namespace: ns.namespace,
+			Event:     OnPartyLeave,
+		})
+		if err != nil {
+			msg.Err = err
+			ns.Conn.Write(msg)
+			return msg.Err
+		}
 	}
 
 	//OnPartyJoin event( check can join party ,...)

@@ -3,6 +3,8 @@ package nats
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/WolffunGame/wolfsocket/metrics"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"github.com/golang/protobuf/proto"
 	"strings"
@@ -15,10 +17,20 @@ import (
 )
 
 type StackExchangeCfgs struct {
-	URL     string
-	Channel string
-	//wolfsocket.Namespaces
-	//*wolfsocket.Server
+	SubjectPrefix string
+	wolfsocket.Namespaces
+	*wolfsocket.Server
+}
+
+func UserInfo(user, password string) nats.Option {
+	return nats.UserInfo(user, password)
+}
+
+func Addr(addr string) nats.Option {
+	return func(o *nats.Options) error {
+		o.Url = addr
+		return nil
+	}
 }
 
 // StackExchange is a `wolfsocket.StackExchange` for nats
@@ -31,6 +43,9 @@ type StackExchange struct {
 	// If you use the same nats server instance for multiple wolfsocket apps,
 	// set this to different values across your apps.
 	SubjectPrefix string
+
+	neffosServer *wolfsocket.Server
+	namespaces   wolfsocket.Namespaces
 
 	publisher   *nats.Conn
 	subscribers map[*wolfsocket.Conn]*subscriber
@@ -94,7 +109,7 @@ func With(options nats.Options) nats.Option {
 //
 // Alternatively, use the `With(nats.Options)` function to
 // customize the client through struct fields.
-func NewStackExchange(config StackExchangeCfgs, options ...nats.Option) (*StackExchange, error) {
+func NewStackExchange(cfg StackExchangeCfgs, options ...nats.Option) (*StackExchange, error) {
 	// For subscribing:
 	// Use a single client or create new for each new incoming websocket connection?
 	// - nats does not have a connection pool and
@@ -115,13 +130,6 @@ func NewStackExchange(config StackExchangeCfgs, options ...nats.Option) (*StackE
 	// Cache the options to be used on every client and
 	// respect any customization by caller.
 	opts := nats.GetDefaultOptions()
-	if config.URL == "" {
-		config.URL = nats.DefaultURL
-	}
-	opts.Url = config.URL
-	// and set that:
-	// opts.Verbose = true
-
 	opts.NoEcho = true
 
 	for _, opt := range options {
@@ -131,6 +139,10 @@ func NewStackExchange(config StackExchangeCfgs, options ...nats.Option) (*StackE
 		if err := opt(&opts); err != nil {
 			return nil, err
 		}
+	}
+
+	if opts.Url == "" {
+		opts.Url = nats.DefaultURL
 	}
 
 	// opts.Url may change from caller, use the struct's field to respect it.
@@ -149,8 +161,10 @@ func NewStackExchange(config StackExchangeCfgs, options ...nats.Option) (*StackE
 
 	exc := &StackExchange{
 		opts:          opts,
-		SubjectPrefix: config.Channel,
-		publisher:     pubConn,
+		SubjectPrefix: cfg.SubjectPrefix,
+		//neffosServer:  cfg.Server,
+		//namespaces:    cfg.Namespaces,
+		publisher: pubConn,
 
 		subscribers:   make(map[*wolfsocket.Conn]*subscriber),
 		addSubscriber: make(chan *subscriber),
@@ -160,6 +174,7 @@ func NewStackExchange(config StackExchangeCfgs, options ...nats.Option) (*StackE
 	}
 
 	go exc.run()
+	//go exc.serverPubSub(cfg.Namespaces)
 
 	return exc, nil
 }
@@ -183,6 +198,11 @@ func (exc *StackExchange) run() {
 				subscription, err := sub.subConn.Subscribe(subject, exc.makeMsgHandler(sub.conn))
 				if err != nil {
 					continue
+				}
+				channel := strings.Split(m.channel, ".")
+				if len(channel) > 1 {
+					//Record prefix (party, chat,notify,..)
+					metrics.RecordHubSubscription(channel[0])
 				}
 				sub.subConn.Flush()
 				if err = sub.subConn.LastError(); err != nil {
@@ -217,6 +237,12 @@ func (exc *StackExchange) run() {
 				if ok {
 					subscription.Unsubscribe()
 					delete(sub.subscriptions, subject)
+
+					channel := strings.Split(m.channel, ".")
+					if len(channel) > 1 {
+						//record prefix
+						metrics.RecordHubUnsubscription(channel[0])
+					}
 				}
 			}
 		case m := <-exc.delSubscriber:
@@ -232,8 +258,9 @@ func (exc *StackExchange) run() {
 	}
 }
 
+// SubjectPrefix.type.id
 func (exc *StackExchange) getChannel(key string) string {
-	return exc.SubjectPrefix + key
+	return fmt.Sprintf("%s.%s", exc.SubjectPrefix, key)
 }
 
 func (exc StackExchange) makeMsgHandler(c *wolfsocket.Conn) nats.MsgHandler {
@@ -479,10 +506,11 @@ func (exc *StackExchange) AskServer(channel string, msg protos.ServerMessage) (r
 	msgChan := make(chan *nats.Msg, 1)
 	defer close(msgChan)
 
-	subConn.Subscribe(exc.getChannel(msg.Token), func(msg *nats.Msg) {
-		msgChan <- msg
-		return
-	})
+	_, _ = subConn.ChanSubscribe(exc.getChannel(msg.Token), msgChan)
+	//if err != nil{
+	//	return nil, errConnect
+	//}
+	//defer sub.Unsubscribe()
 
 	if err = exc.publish(channel, &msg); err != nil {
 		return
@@ -498,6 +526,44 @@ func (exc *StackExchange) AskServer(channel string, msg protos.ServerMessage) (r
 	}
 	return
 }
+
+//func (exc *StackExchange) serverPubSub(namespaces wolfsocket.Namespaces) {
+//	ch := make(chan *nats.Msg, 100)
+//	subConn, err := exc.opts.Connect()
+//	if err != nil {
+//		log.Fatal("Cannot Subscribe namespace channel")
+//	}
+//	for namespace, _ := range namespaces {
+//		sub, err := subConn.Subscribe(exc.getChannel(namespace), func(msg *nats.Msg) {
+//			ch <- msg
+//		})
+//		subConn.ChanSubscribe()
+//		sub.Unsubscribe()
+//		err := exc.opts.Subscribe(exc.ctx())
+//		if err != nil {
+//
+//		}
+//	}
+//	// Loop to handle incoming messages
+//	for {
+//		select {
+//		case msg := <-ch:
+//			// Handle the message
+//			namespace := strings.TrimPrefix(msg.Subject, exc.SubjectPrefix)
+//			if event, ok := namespaces[namespace]; ok {
+//				_ = exc.handleServerMessage(namespace, msg.Payload, event)
+//			}
+//		//case <-exc.close:
+//		//	// Unsubscribe from channels and close connection
+//		//	for namespace := range namespaces {
+//		//		pubSub.Unsubscribe(exc.ctx(), exc.getChannel(namespace))
+//		//	}
+//		//	pubSub.Close()
+//		//	return
+//		//}
+//	}
+//
+//}
 
 func (exc *StackExchange) ctx() context.Context {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)

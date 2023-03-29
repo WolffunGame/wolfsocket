@@ -60,7 +60,7 @@ var (
 
 	OnPartyInvite = "_OnPartyInvite"
 
-	OnPartyAcceptInvite = "_OnPartyAcceptInvite"
+	OnPartyReplyInvitation = "_OnPartyReplyInvitation"
 
 	OnPartyReceiveMessageInvite = "_OnPartyReceiveMessageInvite"
 
