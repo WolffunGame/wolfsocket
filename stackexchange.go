@@ -26,7 +26,8 @@ type StackExchange interface {
 
 	// Publish should publish messages through a stackexchange.
 	// It's called automatically on neffos broadcasting.
-	Publish(msgs []Message) bool
+	//Publish(msgs []Message) bool
+
 	// Subscribe should subscribe to a specific namespace,
 	// it's called automatically on neffos namespace connected.
 	Subscribe(c *Conn, namespace string)
@@ -36,6 +37,7 @@ type StackExchange interface {
 	// Ask should be able to perform a server Ask to a specific client or to all clients
 	// It blocks until response from a specific client if msg.To is filled,
 	// otherwise will return on the first responder's reply.
+	//DEPRECATED:  use AskServer
 	Ask(ctx context.Context, msg Message, token string) (Message, error)
 	// NotifyAsk should notify and unblock a subscribed connection for this
 	// specific message, "token" is the neffos wait signal for this message.
@@ -43,9 +45,9 @@ type StackExchange interface {
 
 	// PublishServer should publish messages through a stackexchange.
 	// It's called automatically on neffos broadcasting when toClient equal false.
-	PublishServer(namespace string, msgs []protos.ServerMessage) error
+	Publish(channel string, msgs []protos.ServerMessage) error
 
-	AskServer(namespace string, msg protos.ServerMessage) (*protos.ReplyMessage, error)
+	AskServer(channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error)
 }
 
 // StackExchangeInitializer is an optional interface for a `StackExchange`.

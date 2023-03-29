@@ -3,6 +3,7 @@ package wolfsocket
 import (
 	"context"
 	"errors"
+	"github.com/WolffunGame/wolfsocket/metrics"
 	"net"
 	"net/http"
 	"sync"
@@ -322,7 +323,9 @@ func (c *Conn) startReader() {
 	// CLIENT is ready when ACK done
 	// SERVER is ready when ACK is done AND `Server#OnConnected` returns with nil error.
 	for {
+		startTime := time.Now()
 		b, msgTyp, err := c.socket.ReadData(c.readTimeout)
+		metrics.RecordReadLatencyMessage(startTime)
 		if err != nil {
 			c.readiness.unwait(err)
 			return
@@ -455,12 +458,32 @@ func (c *Conn) handleMessage(msg Message) error {
 	case OnNamespaceDisconnect:
 		c.replyDisconnect(msg)
 	case OnRoomJoin:
-		if ns, ok := c.tryNamespace(msg); ok {
-			ns.replyRoomJoin(msg)
-		}
+		//if ns, ok := c.tryNamespace(msg); ok {
+		//	ns.replyRoomJoin(msg)
+		//}
 	case OnRoomLeave:
+	//if ns, ok := c.tryNamespace(msg); ok {
+	//	ns.replyRoomLeave(msg)
+	//}
+	case OnPartyCreate:
 		if ns, ok := c.tryNamespace(msg); ok {
-			ns.replyRoomLeave(msg)
+			_ = ns.askPartyCreate(msg)
+		}
+	case OnPartyJoin:
+		if ns, ok := c.tryNamespace(msg); ok {
+			_ = ns.replyPartyJoin(msg)
+		}
+	case OnPartyLeave:
+		if ns, ok := c.tryNamespace(msg); ok {
+			_ = ns.askPartyLeave(msg)
+		}
+	case OnPartyInvite:
+		if ns, ok := c.tryNamespace(msg); ok {
+			ns.askPartyInvite(msg)
+		}
+	case OnPartyReplyInvitation:
+		if ns, ok := c.tryNamespace(msg); ok {
+			ns.replyPartyReplyInvitation(msg)
 		}
 	default:
 		ns, ok := c.tryNamespace(msg)
@@ -701,17 +724,16 @@ func (c *Conn) notifyNamespaceConnected(ns *NSConn, connectMsg Message) {
 	connectMsg.Event = OnNamespaceConnected
 	ns.events.fireEvent(ns, connectMsg) // omit error, it's connected.
 
-	//Tinh comment, khong dung nua
-	//if !c.IsClient() && c.server.usesStackExchange() {
-	//	c.server.StackExchange.Subscribe(c, ns.namespace)
-	//}
+	if !c.IsClient() && c.server.usesStackExchange() {
+		//Subscribe channel is the current namespace of this conn
+		c.server.StackExchange.Subscribe(c, ns.Conn.ID())
+	}
 }
 
 func (c *Conn) notifyNamespaceDisconnect(ns *NSConn, disconnectMsg Message) {
-	//Tinh comment, khong dung nua
-	//if !c.IsClient() && c.server.usesStackExchange() {
-	//	c.server.StackExchange.Unsubscribe(c, disconnectMsg.Namespace)
-	//}
+	if !c.IsClient() && c.server.usesStackExchange() {
+		c.server.StackExchange.Unsubscribe(c, ns.Conn.ID())
+	}
 }
 
 // DisconnectAll method disconnects from all namespaces,
@@ -758,7 +780,7 @@ func (c *Conn) askDisconnect(ctx context.Context, msg Message, lock bool) error 
 
 	// if disconnect is allowed then leave rooms first with force property
 	// before namespace's deletion.
-	ns.forceLeaveAll(true)
+	ns.forceLeaveAll()
 
 	if lock {
 		c.connectedNamespacesMutex.Lock()
@@ -792,7 +814,7 @@ func (c *Conn) replyDisconnect(msg Message) {
 	if c.IsClient() {
 		// if disconnect is allowed then leave rooms first with force property
 		// before namespace's deletion.
-		ns.forceLeaveAll(false)
+		//ns.forceLeaveAll(false)
 
 		c.connectedNamespacesMutex.Lock()
 		delete(c.connectedNamespaces, msg.Namespace)
@@ -812,7 +834,7 @@ func (c *Conn) replyDisconnect(msg Message) {
 		return
 	}
 
-	ns.forceLeaveAll(false)
+	ns.forceLeaveAll()
 
 	c.connectedNamespacesMutex.Lock()
 	delete(c.connectedNamespaces, msg.Namespace)
@@ -824,6 +846,7 @@ func (c *Conn) replyDisconnect(msg Message) {
 }
 
 func (c *Conn) write(b []byte, binary bool) bool {
+	defer metrics.RecordWriteLatencyMessage(time.Now())
 	var err error
 	if binary {
 		err = c.socket.WriteBinary(b, c.writeTimeout)
@@ -866,22 +889,22 @@ func (c *Conn) canWrite(msg Message) bool {
 			return false
 		}
 
-		if msg.Room != "" && !msg.isRoomJoin() && !msg.isRoomLeft() {
-			if !msg.locked {
-				ns.roomsMutex.RLock()
-			}
-
-			_, ok := ns.rooms[msg.Room]
-
-			if !msg.locked {
-				ns.roomsMutex.RUnlock()
-			}
-
-			if !ok {
-				// tried to send to a not joined room.
-				return false
-			}
-		}
+		//if msg.Room != "" && !msg.isRoomJoin() && !msg.isRoomLeft() {
+		//	if !msg.locked {
+		//		ns.roomsMutex.RLock()
+		//	}
+		//
+		//	_, ok := ns.rooms[msg.Room]
+		//
+		//	if !msg.locked {
+		//		ns.roomsMutex.RUnlock()
+		//	}
+		//
+		//	if !ok {
+		//		// tried to send to a not joined room.
+		//		return false
+		//	}
+		//}
 	}
 
 	// if !c.IsClient() && !msg.FromStackExchange {
@@ -1012,7 +1035,7 @@ func (c *Conn) Close() {
 			c.connectedNamespacesMutex.Lock()
 			for namespace, ns := range c.connectedNamespaces {
 				// leave rooms first with force and local property before remove the namespace completely.
-				ns.forceLeaveAll(true)
+				ns.forceLeaveAll()
 
 				disconnectMsg.Namespace = ns.namespace
 				ns.events.fireEvent(ns, disconnectMsg)

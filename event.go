@@ -42,15 +42,42 @@ var (
 	// with just the Message's Body filled, the Event is "OnNativeMessage" and IsNative always true.
 	// This event should be defined under an empty namespace in order this to work.
 	OnNativeMessage = "_OnNativeMessage"
+
+	OnPartyCreate = "_OnPartyCreate"
+	// The OnPartyJoin is the event name that it's fired on before party join. */
+	OnPartyJoin = "_OnPartyJoin"
+	// The OnPartyJoined is the event name that it's fired on after party join. */
+	OnPartyJoined = "_OnPartyJoined"
+	//notify Send information to the rest of the players in the party to update the UI -- RemoteSide
+	OnPartySomebodyJoined = "_OnPartySomebodyJoined"
+
+	// The OnPartyLeave is the event name that it's fired on before party leave. */
+	OnPartyLeave = "_OnPartyLeave"
+	// The OnPartyLeft is the event name that it's fired on after party leave. */
+	OnPartyLeft = "_OnPartyLeft"
+	//notify Send information to the rest of the players in the party to update the UI -- RemoteSide
+	OnPartySomebodyLeft = "_OnPartySomebodyLeft"
+
+	OnPartyInvite = "_OnPartyInvite"
+
+	OnPartyReplyInvitation = "_OnPartyReplyInvitation"
+
+	OnPartyReceiveMessageInvite = "_OnPartyReceiveMessageInvite"
+
+	OnChat           = "_OnChat"
+	OnReceiveMsgChat = "_ReceiveMsgChat"
 )
 
 // IsSystemEvent reports whether the "event" is a system event,
 // OnNamespaceConnect, OnNamespaceConnected, OnNamespaceDisconnect,
 // OnRoomJoin, OnRoomJoined, OnRoomLeave and OnRoomLeft.
+// OnPartyJoin, OnPartyJoined, OnPartyLeave and OnPartyLeft
 func IsSystemEvent(event string) bool {
 	switch event {
 	case OnNamespaceConnect, OnNamespaceConnected, OnNamespaceDisconnect,
-		OnRoomJoin, OnRoomJoined, OnRoomLeave, OnRoomLeft:
+		OnRoomJoin, OnRoomJoined, OnRoomLeave, OnRoomLeft,
+		OnPartyJoin, OnPartyJoined, OnPartyLeave, OnPartyLeft,
+		OnPartySomebodyJoined, OnPartySomebodyLeft:
 		return true
 	default:
 		return false

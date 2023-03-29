@@ -3,14 +3,16 @@ syntax = "proto3";
 option go_package = "/protos";
 
 message ServerMessage {
-  string eventName = 1;
+  string namespace = 1;
+  string eventName = 2;
 
-  string from = 2;
-  repeated string  to = 3;
-  bytes body = 4;
+  string from = 3;
+  repeated string  to = 4;
+  bytes body = 5;
 
-  string token = 5;//for askServer
-  bool toClient = 6;//for write Client
+  string token = 6;//for askServer
+  bool toClient = 7;//for write Client
+  bool exceptSender = 8;
 }
 
 message ReplyMessage {

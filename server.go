@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/WolffunGame/wolfsocket/metrics"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"net/http"
 	"strconv"
@@ -179,12 +180,14 @@ func (s *Server) start() {
 			s.connections[c] = struct{}{}
 			s.connsByID[c.serverConnID] = c
 			atomic.AddUint64(&s.count, 1)
+			metrics.RecordHubClientNew()
 		case c := <-s.disconnect:
 			if _, ok := s.connections[c]; ok {
 				// close(c.out)
 				delete(s.connections, c)
 				delete(s.connsByID, c.serverConnID)
 				atomic.AddUint64(&s.count, ^uint64(0))
+				metrics.RecordHubClientClose()
 				// println("disconnect...")
 				if s.OnDisconnect != nil {
 					// don't fire disconnect if was immediately closed on the `OnConnect` server event.
@@ -537,56 +540,58 @@ func Exclude(connID string) fmt.Stringer { return stringerValue{connID} }
 // doesn't wait for a publish to complete to all clients before any
 // next broadcast call. To change that behavior set the `Server.SyncBroadcaster` to true
 // before server start.
-func (s *Server) Broadcast(exceptSender fmt.Stringer, msgs ...Message) {
+//func (s *Server) Broadcast(exceptSender fmt.Stringer, msgs ...Message) {
+//
+//	if exceptSender != nil {
+//		var fromExplicit, from string
+//
+//		switch c := exceptSender.(type) {
+//		case *Conn:
+//			fromExplicit = c.serverConnID
+//		case *NSConn:
+//			fromExplicit = c.Conn.serverConnID
+//		default:
+//			from = exceptSender.String()
+//		}
+//
+//		for i := range msgs {
+//			if from != "" {
+//				msgs[i].from = from
+//			} else {
+//				msgs[i].FromExplicit = fromExplicit
+//			}
+//		}
+//	}
+//
+//	if s.usesStackExchange() {
+//		s.StackExchange.Publish(msgs)
+//		return
+//	}
+//
+//	if s.SyncBroadcaster {
+//		s.broadcastMessages <- msgs
+//		return
+//	}
+//
+//	s.broadcaster.broadcast(msgs)
+//}
 
-	if exceptSender != nil {
-		var fromExplicit, from string
-
-		switch c := exceptSender.(type) {
-		case *Conn:
-			fromExplicit = c.serverConnID
-		case *NSConn:
-			fromExplicit = c.Conn.serverConnID
-		default:
-			from = exceptSender.String()
-		}
-
-		for i := range msgs {
-			if from != "" {
-				msgs[i].from = from
-			} else {
-				msgs[i].FromExplicit = fromExplicit
-			}
-		}
-	}
-
-	if s.usesStackExchange() {
-		s.StackExchange.Publish(msgs)
-		return
-	}
-
-	if s.SyncBroadcaster {
-		s.broadcastMessages <- msgs
-		return
-	}
-
-	s.broadcaster.broadcast(msgs)
+// SBroadcast Broadcast server
+func (s *Server) SBroadcast(channel string, msgs ...protos.ServerMessage) error {
+	return s.StackExchange.Publish(channel, msgs)
 }
 
-func (s *Server) BroadcastServer(namespace string, msgs ...protos.ServerMessage) error {
-	return s.StackExchange.PublishServer(namespace, msgs)
-}
-
-func (s *Server) AskServer(namespace string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
+func (s *Server) AskServer(channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
 	//You cannot ask client in this case or ask more than 1 conn
-	if msg.ToClient || len(msg.To) != 1 {
+	if channel == msg.Namespace && len(msg.To) != 1 {
 		return nil, ErrInvalidPayload
 	}
 
 	msg.Token = uuid.Must(uuid.NewV4()).String()
-	return s.StackExchange.AskServer(namespace, msg)
+	return s.StackExchange.AskServer(channel, msg)
 }
 
+// DEPRECATED:
 // Ask is like `Broadcast` but it blocks until a response
 // from a specific connection if "msg.To" is filled otherwise
 // from the first connection which will reply to this "msg".
@@ -606,24 +611,24 @@ func (s *Server) Ask(ctx context.Context, msg Message) (Message, error) {
 		msg.wait = genWaitStackExchange(msg.wait)
 		return s.StackExchange.Ask(ctx, msg, msg.wait)
 	}
-
-	ch := make(chan Message)
-	s.waitingMessagesMutex.Lock()
-	s.waitingMessages[msg.wait] = ch
-	s.waitingMessagesMutex.Unlock()
-
-	s.Broadcast(nil, msg)
-
-	select {
-	case <-ctx.Done():
-		return Message{}, ctx.Err()
-	case receive := <-ch:
-		s.waitingMessagesMutex.Lock()
-		delete(s.waitingMessages, msg.wait)
-		s.waitingMessagesMutex.Unlock()
-
-		return receive, receive.Err
-	}
+	return msg, nil
+	//ch := make(chan Message)
+	//s.waitingMessagesMutex.Lock()
+	//s.waitingMessages[msg.wait] = ch
+	//s.waitingMessagesMutex.Unlock()
+	//
+	//s.Broadcast(nil, msg)
+	//
+	//select {
+	//case <-ctx.Done():
+	//	return Message{}, ctx.Err()
+	//case receive := <-ch:
+	//	s.waitingMessagesMutex.Lock()
+	//	delete(s.waitingMessages, msg.wait)
+	//	s.waitingMessagesMutex.Unlock()
+	//
+	//	return receive, receive.Err
+	//}
 }
 
 // GetConnectionsByNamespace can be used as an alternative way to retrieve
