@@ -5,6 +5,13 @@ import (
 	"github.com/WolffunGame/wolfsocket/wserror"
 )
 
+var forcedJoin = false
+
+// Forced to join a new group when already in another group
+func SetForcedJoin(isForced bool) {
+	forcedJoin = isForced
+}
+
 func (ns *NSConn) forceLeaveAll() {
 	ns.askPartyLeave(Message{
 		Namespace: ns.namespace,
@@ -123,9 +130,21 @@ func (ns *NSConn) replyPartyJoin(msg Message) error {
 	}
 
 	if ns.Party != nil {
-		msg.Err = wserror.AlreadyInParty.WSErr("You are already in party", ns.Party.PartyID())
-		ns.Conn.Write(msg)
-		return msg.Err
+		if !forcedJoin {
+			msg.Err = wserror.AlreadyInParty.WSErr("You are already in party", ns.Party.PartyID())
+			ns.Conn.Write(msg)
+			return msg.Err
+		}
+		//leave current joined party
+		err := ns.askPartyLeave(Message{
+			Namespace: ns.namespace,
+			Event:     OnPartyLeave,
+		})
+		if err != nil {
+			msg.Err = err
+			ns.Conn.Write(msg)
+			return msg.Err
+		}
 	}
 
 	//OnPartyJoin event( check can join party ,...)
