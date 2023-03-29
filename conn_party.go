@@ -87,6 +87,7 @@ func (ns *NSConn) askPartyInvite(msg Message) {
 	//		ToClient:  true,
 	//	})
 	//}
+	ns.Conn.writeEmptyReply(msg.wait)
 }
 
 func (ns *NSConn) replyPartyReplyInvitation(msg Message) {
