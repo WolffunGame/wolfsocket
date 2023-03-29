@@ -21,7 +21,17 @@ type StackExchangeCfgs struct {
 	wolfsocket.Namespaces
 	*wolfsocket.Server
 }
-type NatsOption nats.Option
+
+func UserInfo(user, password string) nats.Option {
+	return nats.UserInfo(user, password)
+}
+
+func Addr(addr string) nats.Option {
+	return func(o *nats.Options) error {
+		o.Url = addr
+		return nil
+	}
+}
 
 // StackExchange is a `wolfsocket.StackExchange` for nats
 // based on https://nats-io.github.io/docs/developer/tutorials/pubsub.html.
@@ -99,7 +109,7 @@ func With(options nats.Options) nats.Option {
 //
 // Alternatively, use the `With(nats.Options)` function to
 // customize the client through struct fields.
-func NewStackExchange(cfg StackExchangeCfgs, options ...NatsOption) (*StackExchange, error) {
+func NewStackExchange(cfg StackExchangeCfgs, options ...nats.Option) (*StackExchange, error) {
 	// For subscribing:
 	// Use a single client or create new for each new incoming websocket connection?
 	// - nats does not have a connection pool and
