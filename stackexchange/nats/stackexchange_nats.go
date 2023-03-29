@@ -209,7 +209,7 @@ func (exc *StackExchange) run() {
 					// wolfsocket.Debugf("[%s] OnSubscribe [%s] Last Error: %v", m.conn, subject, err)
 					continue
 				}
-
+				wolfsocket.Debugf(m.conn.ID(), " - Subscribe - ", exc.getChannel(m.channel), " success !!!")
 				sub.mu.Lock()
 				if sub.subscriptions == nil {
 					sub.subscriptions = make(map[string]*nats.Subscription)
