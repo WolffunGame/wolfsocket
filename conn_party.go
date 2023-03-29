@@ -82,7 +82,7 @@ func (ns *NSConn) askPartyInvite(msg Message) {
 	//}
 }
 
-func (ns *NSConn) replyPartyAcceptInvite(msg Message) {
+func (ns *NSConn) replyPartyReplyInvitation(msg Message) {
 	if ns.Party != nil {
 		//force leave current party
 		err := ns.askPartyLeave(Message{

@@ -481,9 +481,9 @@ func (c *Conn) handleMessage(msg Message) error {
 		if ns, ok := c.tryNamespace(msg); ok {
 			ns.askPartyInvite(msg)
 		}
-	case OnPartyAcceptInvite:
+	case OnPartyReplyInvitation:
 		if ns, ok := c.tryNamespace(msg); ok {
-			ns.replyPartyAcceptInvite(msg)
+			ns.replyPartyReplyInvitation(msg)
 		}
 	default:
 		ns, ok := c.tryNamespace(msg)
