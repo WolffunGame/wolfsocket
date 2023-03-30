@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/WolffunGame/wolfsocket"
+	"github.com/WolffunGame/wolfsocket/metrics"
 	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/proto"
@@ -118,11 +119,20 @@ func (exc *StackExchange) run() {
 					exc.subscribe <- m //?? retry
 					continue
 				}
+				channel := strings.Split(m.channel, ".")
+				if len(channel) > 1 {
+					metrics.RecordHubSubscription(channel[0])
+				}
 				wolfsocket.Debugf(m.conn.ID(), " - Subscribe - ", exc.getChannel(m.channel), " success !!!")
 			}
 		case m := <-exc.unsubscribe:
 			if sub, ok := exc.subscribers[m.conn]; ok {
-				_ = sub.pubSub.Unsubscribe(exc.ctx(), m.channel)
+				sub.pubSub.Unsubscribe(exc.ctx(), m.channel)
+				channel := strings.Split(m.channel, ".")
+				if len(channel) > 1 {
+					metrics.RecordHubUnsubscription(channel[0])
+				}
+				wolfsocket.Debugf(m.conn.ID(), " - Unsubscribe - ", exc.getChannel(m.channel), " success !!!")
 			}
 		case m := <-exc.delSubscriber:
 			if sub, ok := exc.subscribers[m.conn]; ok {
