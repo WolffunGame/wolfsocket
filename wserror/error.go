@@ -1,7 +1,6 @@
 package wserror
 
 import (
-	"github.com/WolffunGame/wolfsocket"
 	"strconv"
 	"strings"
 )
@@ -39,7 +38,6 @@ func Error(err error) WSError {
 
 // error
 func (err WSError) Error() string {
-	wolfsocket.Debugf("WSError ", err.errMsg, err.errorCode)
 	return strconv.Itoa(int(err.errorCode))
 }
 
