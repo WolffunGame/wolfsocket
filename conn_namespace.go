@@ -92,8 +92,8 @@ func (nsConn *NSConn) SBroadcast(channel string, msgs ...protos.ServerMessage) e
 	return nsConn.server().SBroadcast(channel, msgs...)
 }
 
-func (nsConn *NSConn) AskServer(channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
-	return nsConn.server().AskServer(channel, msg)
+func (nsConn *NSConn) AskServer(ctx context.Context, channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
+	return nsConn.server().AskServer(ctx, channel, msg)
 }
 
 func (nsConn *NSConn) server() *Server {
