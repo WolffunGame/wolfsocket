@@ -408,13 +408,12 @@ func (exc *StackExchange) handleServerMessage(namespace, payload string, event w
 	return nil
 }
 
-func (exc *StackExchange) AskServer(channel string, msg protos.ServerMessage) (response *protos.ReplyMessage, err error) {
+func (exc *StackExchange) AskServer(ctx context.Context, channel string, msg protos.ServerMessage) (response *protos.ReplyMessage, err error) {
 	if msg.Token == "" || channel == "" {
 		err = wolfsocket.ErrInvalidPayload
 		return
 	}
 	sub := exc.client.Subscribe(nil)
-	ctx := exc.ctx()
 	err = sub.Subscribe(ctx, exc.getChannel(msg.Token))
 	if err != nil {
 		return

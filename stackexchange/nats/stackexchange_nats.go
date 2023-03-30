@@ -490,12 +490,11 @@ func (exc *StackExchange) publish(channel string, msg *protos.ServerMessage) err
 	return exc.publishCommand(exc.getChannel(channel), data)
 }
 
-func (exc *StackExchange) AskServer(channel string, msg protos.ServerMessage) (response *protos.ReplyMessage, err error) {
+func (exc *StackExchange) AskServer(ctx context.Context, channel string, msg protos.ServerMessage) (response *protos.ReplyMessage, err error) {
 	if msg.Token == "" || channel == "" {
 		err = wolfsocket.ErrInvalidPayload
 		return
 	}
-	ctx := exc.ctx()
 	subConn, errConnect := exc.opts.Connect()
 	if errConnect != nil {
 		return nil, errConnect

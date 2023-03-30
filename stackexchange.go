@@ -47,7 +47,7 @@ type StackExchange interface {
 	// It's called automatically on neffos broadcasting when toClient equal false.
 	Publish(channel string, msgs []protos.ServerMessage) error
 
-	AskServer(channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error)
+	AskServer(ctx context.Context, channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error)
 }
 
 // StackExchangeInitializer is an optional interface for a `StackExchange`.
