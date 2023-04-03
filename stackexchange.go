@@ -2,7 +2,7 @@ package wolfsocket
 
 import (
 	"context"
-	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
+	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
 )
 
 // StackExchange is an optional interface

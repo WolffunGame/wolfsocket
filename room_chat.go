@@ -1,7 +1,7 @@
 package wolfsocket
 
 import (
-	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
+	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
 )
 
 type RoomChannel uint32 //country - party - lobby,...
@@ -46,7 +46,6 @@ func (rc *BaseRoomChat) Conn() *NSConn {
 
 func (rc *BaseRoomChat) Chat(messageData []byte) {
 	rc.conn.SBroadcast(rc.getChannel(), protos.ServerMessage{
-		Namespace: rc.conn.namespace,
 		EventName: OnReceiveMsgChat,
 		ToClient:  true,
 		Body:      messageData,

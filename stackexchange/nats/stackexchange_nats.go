@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/WolffunGame/wolfsocket/metrics"
-	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
+	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
 	"github.com/golang/protobuf/proto"
 	"strings"
 	"sync"
@@ -308,10 +308,8 @@ func (exc *StackExchange) handleMessage(natsMsg *nats.Msg, conn *wolfsocket.Conn
 	if err != nil {
 		return
 	}
-	if serverMsg.ExceptSender {
-		if conn.Is(serverMsg.From) {
-			return
-		}
+	if conn.Is(serverMsg.ExceptSender) {
+		return
 	}
 
 	defer func() {

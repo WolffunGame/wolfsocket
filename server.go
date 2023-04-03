@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/WolffunGame/wolfsocket/metrics"
-	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
+	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
 	"net/http"
 	"strconv"
 	"strings"

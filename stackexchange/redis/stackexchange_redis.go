@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/WolffunGame/wolfsocket"
 	"github.com/WolffunGame/wolfsocket/metrics"
-	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
+	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/proto"
 	"log"
@@ -325,10 +325,8 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 	if err != nil {
 		return
 	}
-	if serverMsg.ExceptSender {
-		if conn.Is(serverMsg.From) {
-			return
-		}
+	if conn.Is(serverMsg.ExceptSender) {
+		return
 	}
 
 	defer func() {
@@ -386,7 +384,7 @@ func (exc *StackExchange) handleServerMessage(namespace, payload string, event w
 			msg := wolfsocket.Message{
 				Namespace:    namespace,
 				Event:        serverMsg.EventName,
-				FromExplicit: serverMsg.From,
+				FromExplicit: serverMsg.ExceptSender,
 				Body:         serverMsg.Body,
 			}
 			if serverMsg.ToClient {

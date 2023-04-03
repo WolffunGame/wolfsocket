@@ -1,6 +1,8 @@
 package wolfsocket
 
-import "github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
+import (
+	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
+)
 
 const notifyKey = "notify."
 

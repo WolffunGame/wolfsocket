@@ -4,7 +4,8 @@ import (
 	"context"
 	errors "errors"
 	"fmt"
-	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
+	"github.com/WolffunGame/wolfsocket/options"
+	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
 	"reflect"
 	"sync"
 )
@@ -88,8 +89,18 @@ func (ns *NSConn) AskRemote(ctx context.Context, event string, body []byte) (Mes
 	return ns.Conn.Ask(ctx, Message{Namespace: ns.namespace, Event: event, Body: body})
 }
 
-func (nsConn *NSConn) SBroadcast(channel string, msgs ...protos.ServerMessage) error {
-	return nsConn.server().SBroadcast(channel, msgs...)
+// only need input event-name + body data
+func (nsConn *NSConn) SBroadcast(channel string, msg protos.ServerMessage, opts ...options.BroadcastOption) error {
+	msg.Namespace = nsConn.namespace
+
+	for _, opt := range opts {
+		err := opt(&msg)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nsConn.server().SBroadcast(channel, msg)
 }
 
 func (nsConn *NSConn) AskServer(ctx context.Context, channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
