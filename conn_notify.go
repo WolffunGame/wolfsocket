@@ -1,6 +1,7 @@
 package wolfsocket
 
 import (
+	"github.com/WolffunGame/wolfsocket/options"
 	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
 )
 
@@ -11,8 +12,8 @@ func (nsConn *NSConn) SubscribeNotify(friendIDs ...string) {
 		nsConn.Subscribe(getKeyNotify(friendID))
 	}
 }
-func (nsConn *NSConn) Notify(msgs ...protos.ServerMessage) error {
-	return nsConn.SBroadcast(getKeyNotify(nsConn.ID()), msgs...)
+func (nsConn *NSConn) Notify(msg protos.ServerMessage, opts ...options.BroadcastOption) error {
+	return nsConn.SBroadcast(getKeyNotify(nsConn.ID()), msg, opts...)
 }
 
 func getKeyNotify(userID string) string {

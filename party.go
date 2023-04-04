@@ -10,7 +10,7 @@ type Party interface {
 	NSConn() *NSConn
 	PartyID() string
 
-	Broadcast(msg protos.ServerMessage, opts ...options.BroadcastOption)
+	Broadcast(eventName string, body []byte, opts ...options.BroadcastOption)
 
 	Create(nsConn *NSConn) error
 	Join(nsConn *NSConn, playerInfo []byte) error
@@ -18,6 +18,8 @@ type Party interface {
 
 	PartyInfo() []byte
 }
+
+var _ Party = &BaseParty{}
 
 const prefixParty = "party."
 
@@ -99,6 +101,11 @@ func (p *BaseParty) Leave() error {
 	p.nsConn = nil
 
 	return nil
+}
+
+func (p *BaseParty) PartyInfo() []byte {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (p *BaseParty) getChannel() string {
