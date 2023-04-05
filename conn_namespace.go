@@ -92,19 +92,30 @@ func (ns *NSConn) AskRemote(ctx context.Context, event string, body []byte) (Mes
 // only need input event-name + body data
 func (nsConn *NSConn) SBroadcast(channel string, msg protos.ServerMessage, opts ...options.BroadcastOption) error {
 	msg.Namespace = nsConn.namespace
+	err := mergeOptions(&msg, opts...)
+	if err != nil {
+		return err
+	}
+	return nsConn.server().SBroadcast(channel, msg)
+}
 
+func (nsConn *NSConn) AskServer(ctx context.Context, channel string, msg protos.ServerMessage, opts ...options.BroadcastOption) (*protos.ReplyMessage, error) {
+	msg.Namespace = nsConn.namespace
+	err := mergeOptions(&msg, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return nsConn.server().AskServer(ctx, channel, msg)
+}
+
+func mergeOptions(msg *protos.ServerMessage, opts ...options.BroadcastOption) error {
 	for _, opt := range opts {
-		err := opt(&msg)
+		err := opt(msg)
 		if err != nil {
 			return err
 		}
 	}
-
-	return nsConn.server().SBroadcast(channel, msg)
-}
-
-func (nsConn *NSConn) AskServer(ctx context.Context, channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
-	return nsConn.server().AskServer(ctx, channel, msg)
+	return nil
 }
 
 func (nsConn *NSConn) server() *Server {
