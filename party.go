@@ -16,6 +16,9 @@ type Party interface {
 	Join(nsConn *NSConn, playerInfo []byte) error
 	Leave() error
 
+	Subscribe()
+	Unsubscribe()
+
 	PartyInfo() []byte
 }
 
