@@ -318,7 +318,9 @@ func serializeOutput(wait, namespace, room, event string,
 			body = b
 		} else {
 			//body = []byte(err.Error())
-			body = wserror.Error(err).Bytes()
+			wsErr := wserror.Error(err)
+			Debugf("WSError ", wsErr.String(), wsErr.ErrorCode())
+			body = wsErr.Bytes()
 			isErrorByte = trueByte
 		}
 	}

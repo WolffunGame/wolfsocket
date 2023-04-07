@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/WolffunGame/wolfsocket/metrics"
-	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
+	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
 	"net/http"
 	"strconv"
 	"strings"
@@ -581,14 +581,14 @@ func (s *Server) SBroadcast(channel string, msgs ...protos.ServerMessage) error 
 	return s.StackExchange.Publish(channel, msgs)
 }
 
-func (s *Server) AskServer(channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
+func (s *Server) AskServer(ctx context.Context, channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
 	//You cannot ask client in this case or ask more than 1 conn
 	if channel == msg.Namespace && len(msg.To) != 1 {
 		return nil, ErrInvalidPayload
 	}
 
 	msg.Token = uuid.Must(uuid.NewV4()).String()
-	return s.StackExchange.AskServer(channel, msg)
+	return s.StackExchange.AskServer(ctx, channel, msg)
 }
 
 // DEPRECATED:

@@ -1040,6 +1040,7 @@ func (c *Conn) Close() {
 				disconnectMsg.Namespace = ns.namespace
 				ns.events.fireEvent(ns, disconnectMsg)
 				delete(c.connectedNamespaces, namespace)
+				c.notifyNamespaceDisconnect(ns, disconnectMsg)
 			}
 			c.connectedNamespacesMutex.Unlock()
 

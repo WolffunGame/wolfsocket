@@ -163,7 +163,7 @@ func (ns *NSConn) replyPartyJoin(msg Message) error {
 		return msg.Err
 	}
 
-	if ns.Party.Conn() == nil {
+	if ns.Party.NSConn() == nil {
 		ns.Party.Join(ns, nil)
 	}
 

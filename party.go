@@ -1,31 +1,35 @@
 package wolfsocket
 
 import (
-	"github.com/WolffunGame/wolfsocket/stackexchange/redis/protos"
+	"github.com/WolffunGame/wolfsocket/options"
+	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
 	uuid "github.com/iris-contrib/go.uuid"
 )
 
 type Party interface {
-	Conn() *NSConn
+	NSConn() *NSConn
 	PartyID() string
-	Subscribe(conn *NSConn)
-	Unsubscribe(conn *NSConn)
 
-	Broadcast(msg ...protos.ServerMessage)
+	Broadcast(eventName string, body []byte, opts ...options.BroadcastOption)
 
 	Create(nsConn *NSConn) error
 	Join(nsConn *NSConn, playerInfo []byte) error
 	Leave() error
 
+	Subscribe()
+	Unsubscribe()
+
 	PartyInfo() []byte
 }
+
+var _ Party = &BaseParty{}
 
 const prefixParty = "party."
 
 type BaseParty struct {
 	ID string
 
-	conn *NSConn
+	nsConn *NSConn
 }
 
 func NewParty(partyID string) BaseParty {
@@ -41,19 +45,23 @@ func genID() string {
 	return uuid.Must(uuid.NewV4()).String()
 }
 
-func (p *BaseParty) Conn() *NSConn {
-	return p.conn
+func (p *BaseParty) NSConn() *NSConn {
+	return p.nsConn
 }
 
-func (p *BaseParty) Broadcast(msg ...protos.ServerMessage) {
-	p.conn.SBroadcast(p.getChannel(), msg...)
+func (p *BaseParty) Broadcast(eventName string, body []byte, opts ...options.BroadcastOption) {
+	msg := protos.ServerMessage{
+		EventName: eventName,
+		Body:      body,
+	}
+	p.nsConn.SBroadcast(p.getChannel(), msg, opts...)
 }
 
-func (p *BaseParty) Subscribe(conn *NSConn) {
-	conn.Subscribe(p.getChannel())
+func (p *BaseParty) Subscribe() {
+	p.nsConn.Subscribe(p.getChannel())
 }
-func (p *BaseParty) Unsubscribe(conn *NSConn) {
-	conn.Unsubscribe(p.getChannel())
+func (p *BaseParty) Unsubscribe() {
+	p.nsConn.Unsubscribe(p.getChannel())
 }
 
 func (p *BaseParty) String() string {
@@ -65,49 +73,42 @@ func (p *BaseParty) PartyID() string {
 }
 
 func (p *BaseParty) Create(nsConn *NSConn) error {
-	p.conn = nsConn
-	p.Subscribe(nsConn)
+	p.nsConn = nsConn
+	p.Subscribe()
 	return nil
 }
 
 // playerInfo send back to remote-side
 func (p *BaseParty) Join(nsConn *NSConn, playerInfo []byte) error {
-	p.conn = nsConn
+	p.nsConn = nsConn
 	//send message to all playerservice in this party
-	p.Broadcast(protos.ServerMessage{
-		Namespace: p.conn.Namespace(),
-		EventName: OnPartySomebodyJoined,
-		Body:      playerInfo,
-		ToClient:  true,
+	p.Broadcast(OnPartySomebodyJoined, playerInfo,
+		options.ToClient(),
+		options.Except(p.nsConn.Conn.GetServerConnID()),
+	)
 
-		//skip sender
-		From:         p.conn.Conn.serverConnID,
-		ExceptSender: true,
-	})
-
-	p.Subscribe(p.conn)
+	p.Subscribe()
 
 	return nil
 }
 
 func (p *BaseParty) Leave() error {
 
-	p.Unsubscribe(p.conn)
+	p.Unsubscribe()
 	//send message to all playerservice in this party
-	p.Broadcast(protos.ServerMessage{
-		Namespace: p.conn.Namespace(),
-		EventName: OnPartySomebodyLeft,
-		Body:      []byte(p.conn.ID()),
-		ToClient:  true,
+	p.Broadcast(OnPartySomebodyLeft, []byte(p.nsConn.ID()),
+		options.ToClient(),
+		options.Except(p.nsConn.Conn.GetServerConnID()),
+	)
 
-		//skip sender
-		From:         p.conn.Conn.serverConnID,
-		ExceptSender: true,
-	})
-
-	p.conn = nil
+	p.nsConn = nil
 
 	return nil
+}
+
+func (p *BaseParty) PartyInfo() []byte {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (p *BaseParty) getChannel() string {
