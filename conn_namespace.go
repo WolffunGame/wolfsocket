@@ -2,7 +2,7 @@ package wolfsocket
 
 import (
 	"context"
-	errors "errors"
+	"errors"
 	"fmt"
 	"github.com/WolffunGame/wolfsocket/options"
 	"github.com/WolffunGame/wolfsocket/stackexchange/protos"

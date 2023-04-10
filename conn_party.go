@@ -12,6 +12,10 @@ func SetForcedJoin(isForced bool) {
 	forcedJoin = isForced
 }
 
+func (ns *NSConn) IsInParty() bool {
+	return ns.Party != nil
+}
+
 func (ns *NSConn) forceLeaveAll() {
 	ns.askPartyLeave(Message{
 		Namespace: ns.namespace,
