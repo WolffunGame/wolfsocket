@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/WolffunGame/wolfsocket"
+	"github.com/WolffunService/wolfsocket"
 
 	"github.com/mediocregopher/radix/v3"
 )

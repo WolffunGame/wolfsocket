@@ -5,7 +5,7 @@ import (
 	"github.com/RussellLuo/timingwheel"
 	"time"
 
-	neffos "github.com/WolffunGame/wolfsocket"
+	neffos "github.com/WolffunService/wolfsocket"
 
 	gobwas "github.com/gobwas/ws"
 )

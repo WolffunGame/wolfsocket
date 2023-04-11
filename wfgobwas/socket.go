@@ -1,7 +1,7 @@
 package wfgobwas
 
 import (
-	neffos "github.com/WolffunGame/wolfsocket"
+	neffos "github.com/WolffunService/wolfsocket"
 	"io"
 	"io/ioutil"
 	"log"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/WolffunGame/wolfsocket"
+	"github.com/WolffunService/wolfsocket"
 
 	gorilla "github.com/gorilla/websocket"
 )
