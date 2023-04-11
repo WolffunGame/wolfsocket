@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/WolffunGame/wolfsocket"
-	"github.com/WolffunGame/wolfsocket/gobwas"
+	"github.com/WolffunService/wolfsocket"
+	"github.com/WolffunService/wolfsocket/gobwas"
 )
 
 type serverConn struct {
