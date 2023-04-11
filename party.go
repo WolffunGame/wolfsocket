@@ -9,6 +9,7 @@ import (
 type Party interface {
 	NSConn() *NSConn
 	PartyID() string
+	SetPartyID(partyID string)
 
 	Broadcast(eventName string, body []byte, opts ...options.BroadcastOption)
 
@@ -32,17 +33,22 @@ type BaseParty struct {
 	nsConn *NSConn
 }
 
-func NewParty(partyID string) BaseParty {
+func NewParty(partyID string) *BaseParty {
 	if partyID == "" {
 		partyID = genID()
 	}
-	return BaseParty{
-		ID: partyID,
-	}
+	bp := &BaseParty{}
+	bp.SetPartyID(partyID)
+
+	return bp
 }
 
 func genID() string {
 	return uuid.Must(uuid.NewV4()).String()
+}
+
+func (p *BaseParty) SetPartyID(partyID string) {
+	p.ID = partyID
 }
 
 func (p *BaseParty) NSConn() *NSConn {
