@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/WolffunGame/wolfsocket/metrics"
 	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
+	"github.com/segmentio/ksuid"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -287,8 +289,17 @@ func isServerConnID(s string) bool {
 	return strings.HasPrefix(s, "neffos(0x")
 }
 
-func genServerConnID(s *Server, c *Conn) string {
-	return fmt.Sprintf("neffos(0x%s(%s%p))", s.uuid, c.id, c)
+func genServerConnID(connID string) string {
+	var extent string
+	r, err := ksuid.NewRandom()
+	if err != nil {
+		log.Println("wolfsocket: genServerConnID: generate ID error. Used timestamp")
+		extent = strconv.FormatInt(time.Now().UnixMilli(), 10)
+	} else {
+		extent = r.String()
+	}
+
+	return fmt.Sprintf("neffos(0x(%s)(%s))", connID, extent)
 }
 
 // Upgrade handles the connection, same as `ServeHTTP` but it can accept
@@ -342,7 +353,7 @@ func (s *Server) Upgrade(
 	} else {
 		c.id = s.IDGenerator(w, r)
 	}
-	c.serverConnID = genServerConnID(s, c)
+	c.serverConnID = genServerConnID(c.id)
 
 	c.readTimeout = s.readTimeout
 	c.writeTimeout = s.writeTimeout
@@ -516,9 +527,8 @@ func (s stringerValue) String() string { return s.v }
 //
 // Example Code:
 // nsConn.Conn.Server().Broadcast(
-//
-//		neffos.Exclude("connection_id_here"),
-//	 neffos.Message{Namespace: "default", Room: "roomName or empty", Event: "chat", Body: [...]})
+//	neffos.Exclude("connection_id_here"),
+//  neffos.Message{Namespace: "default", Room: "roomName or empty", Event: "chat", Body: [...]})
 func Exclude(connID string) fmt.Stringer { return stringerValue{connID} }
 
 // Broadcast method is fast and does not block any new incoming connection by-default,
@@ -532,9 +542,8 @@ func Exclude(connID string) fmt.Stringer { return stringerValue{connID} }
 //
 // Example Code:
 // nsConn.Conn.Server().Broadcast(
-//
-//		nsConn OR nil,
-//	 neffos.Message{Namespace: "default", Room: "roomName or empty", Event: "chat", Body: [...]})
+//	nsConn OR nil,
+//  neffos.Message{Namespace: "default", Room: "roomName or empty", Event: "chat", Body: [...]})
 //
 // Note that it if `StackExchange` is nil then its default behavior
 // doesn't wait for a publish to complete to all clients before any

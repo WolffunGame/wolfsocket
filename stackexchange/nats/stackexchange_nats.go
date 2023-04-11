@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/WolffunGame/wolfsocket"
+	"github.com/WolffunService/wolfsocket"
 
 	"github.com/nats-io/nats.go"
 )
