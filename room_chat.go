@@ -1,7 +1,7 @@
 package wolfsocket
 
 import (
-	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
+	"github.com/WolffunService/wolfsocket/stackexchange/protos"
 )
 
 type RoomChannel uint32 //country - party - lobby,...

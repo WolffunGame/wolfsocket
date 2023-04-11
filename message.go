@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/WolffunGame/wolfsocket/wserror"
+	"github.com/WolffunService/wolfsocket/wserror"
 	"strconv"
 	"strings"
 	"time"

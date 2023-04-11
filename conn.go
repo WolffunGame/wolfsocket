@@ -3,7 +3,7 @@ package wolfsocket
 import (
 	"context"
 	"errors"
-	"github.com/WolffunGame/wolfsocket/metrics"
+	"github.com/WolffunService/wolfsocket/metrics"
 	"net"
 	"net/http"
 	"sync"

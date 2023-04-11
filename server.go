@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/WolffunGame/wolfsocket/metrics"
-	"github.com/WolffunGame/wolfsocket/stackexchange/protos"
+	"github.com/WolffunService/wolfsocket/metrics"
+	"github.com/WolffunService/wolfsocket/stackexchange/protos"
 	"github.com/segmentio/ksuid"
 	"log"
 	"net/http"
@@ -527,8 +527,9 @@ func (s stringerValue) String() string { return s.v }
 //
 // Example Code:
 // nsConn.Conn.Server().Broadcast(
-//	neffos.Exclude("connection_id_here"),
-//  neffos.Message{Namespace: "default", Room: "roomName or empty", Event: "chat", Body: [...]})
+//
+//		neffos.Exclude("connection_id_here"),
+//	 neffos.Message{Namespace: "default", Room: "roomName or empty", Event: "chat", Body: [...]})
 func Exclude(connID string) fmt.Stringer { return stringerValue{connID} }
 
 // Broadcast method is fast and does not block any new incoming connection by-default,
