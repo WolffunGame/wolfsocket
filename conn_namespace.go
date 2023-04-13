@@ -179,6 +179,7 @@ func (ns *NSConn) Write(eventName string, body []byte) {
 		Namespace: ns.namespace,
 		Event:     eventName,
 		Body:      body,
+		SetBinary: true,
 	})
 }
 
