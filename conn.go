@@ -184,6 +184,13 @@ func (c *Conn) Server() *Server {
 	return c.server
 }
 
+const (
+	CtxKeyFindMatchVersion = "findMatchVersion"
+	CtxKeyTicketCache      = "ticketCache"
+	CtxKeyPlayerProto      = "playerProto"
+	CtxKeyPlayerInfo       = "playerInfo"
+)
+
 // Set sets a value to this connection's store.
 func (c *Conn) Set(key string, value interface{}) {
 	c.storeMutex.Lock()
@@ -205,6 +212,13 @@ func (c *Conn) Get(key string) interface{} {
 	v := c.store[key]
 	c.storeMutex.RUnlock()
 	return v
+}
+
+// Del deletes a value from connection's store
+func (c *Conn) Del(key string) {
+	c.storeMutex.Lock()
+	delete(c.store, key)
+	c.storeMutex.Unlock()
 }
 
 // Increment works like `Set` method.
