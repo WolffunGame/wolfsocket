@@ -186,6 +186,7 @@ func (c *Conn) Server() *Server {
 
 const (
 	CtxKeyFindMatchVersion = "findMatchVersion"
+	CtxKeyGameVersion      = "gameVersion"
 	CtxKeyTicketCache      = "ticketCache"
 	CtxKeyPlayerProto      = "playerProto"
 	CtxKeyPlayerInfo       = "playerInfo"
