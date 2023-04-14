@@ -283,7 +283,11 @@ func IsTryingToReconnect(err error) (ok bool) {
 }
 
 // This header key should match with that browser-client's `whenResourceOnline->re-dial` uses.
-const websocketReconectHeaderKey = "X-Websocket-Reconnect"
+const (
+	websocketReconectHeaderKey = "X-Websocket-Reconnect"
+	findMatchVersionHeaderKey  = "FindmatchVersion"
+	gameVersionHeaderKey       = "Version"
+)
 
 func isServerConnID(s string) bool {
 	return strings.HasPrefix(s, "neffos(0x")
@@ -362,6 +366,17 @@ func (s *Server) Upgrade(
 	retriesHeaderValue := r.Header.Get(websocketReconectHeaderKey)
 	if retriesHeaderValue != "" {
 		c.ReconnectTries, _ = strconv.Atoi(retriesHeaderValue)
+	}
+
+	findMatchVersion := r.Header.Get(findMatchVersionHeaderKey)
+	if findMatchVersion != "" {
+		version, _ := strconv.Atoi(findMatchVersion)
+		c.Set(CtxKeyFindMatchVersion, version)
+	}
+
+	gameVersion := r.Header.Get(gameVersionHeaderKey)
+	if gameVersion != "" {
+		c.Set(CtxKeyGameVersion, gameVersion)
 	}
 
 	if !s.usesStackExchange() && !s.SyncBroadcaster {
