@@ -139,6 +139,7 @@ func New(upgrader Upgrader, connHandler ConnHandler) *Server {
 		waitingMessages:   make(map[string]chan Message),
 		IDGenerator:       DefaultIDGenerator,
 	}
+	publisher.Init(s)
 
 	go s.start()
 

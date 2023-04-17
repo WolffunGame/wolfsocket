@@ -15,11 +15,7 @@ func Init(server *wolfsocket.Server) {
 		return
 	}
 
-	if server.StackExchange != nil {
-		SetStackExchange(server)
-	} else {
-		p = do(server)
-	}
+	p = do(server)
 }
 
 func SetStackExchange(server *wolfsocket.Server) {
