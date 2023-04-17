@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/WolffunService/wolfsocket/metrics"
+	"github.com/WolffunService/wolfsocket/publisher"
 	"github.com/WolffunService/wolfsocket/stackexchange/protos"
 	"github.com/segmentio/ksuid"
 	"log"
@@ -164,6 +165,8 @@ func (s *Server) UseStackExchange(exc StackExchange) error {
 	//} else {
 	s.StackExchange = exc
 	//}
+
+	publisher.SetStackExchange(s)
 
 	return nil
 }
