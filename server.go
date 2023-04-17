@@ -50,6 +50,7 @@ type Server struct {
 	uuid string
 
 	upgrader      Upgrader
+	HeaderReader  func(conn *Conn, h http.Header)
 	IDGenerator   IDGenerator
 	StackExchange StackExchange
 
@@ -283,11 +284,7 @@ func IsTryingToReconnect(err error) (ok bool) {
 }
 
 // This header key should match with that browser-client's `whenResourceOnline->re-dial` uses.
-const (
-	websocketReconectHeaderKey = "X-Websocket-Reconnect"
-	findMatchVersionHeaderKey  = "FindmatchVersion"
-	gameVersionHeaderKey       = "Version"
-)
+const websocketReconectHeaderKey = "X-Websocket-Reconnect"
 
 func isServerConnID(s string) bool {
 	return strings.HasPrefix(s, "neffos(0x")
@@ -368,15 +365,8 @@ func (s *Server) Upgrade(
 		c.ReconnectTries, _ = strconv.Atoi(retriesHeaderValue)
 	}
 
-	findMatchVersion := r.Header.Get(findMatchVersionHeaderKey)
-	if findMatchVersion != "" {
-		version, _ := strconv.Atoi(findMatchVersion)
-		c.Set(CtxKeyFindMatchVersion, version)
-	}
-
-	gameVersion := r.Header.Get(gameVersionHeaderKey)
-	if gameVersion != "" {
-		c.Set(CtxKeyGameVersion, gameVersion)
+	if s.HeaderReader != nil {
+		s.HeaderReader(c, r.Header)
 	}
 
 	if !s.usesStackExchange() && !s.SyncBroadcaster {
