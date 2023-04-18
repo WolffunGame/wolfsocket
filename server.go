@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/WolffunService/wolfsocket/metrics"
-	"github.com/WolffunService/wolfsocket/publisher"
 	"github.com/WolffunService/wolfsocket/stackexchange/protos"
 	"github.com/segmentio/ksuid"
 	"log"
@@ -139,7 +138,9 @@ func New(upgrader Upgrader, connHandler ConnHandler) *Server {
 		waitingMessages:   make(map[string]chan Message),
 		IDGenerator:       DefaultIDGenerator,
 	}
-	publisher.Init(s)
+
+	//init publisher
+	initPublisher(s)
 
 	go s.start()
 
@@ -167,7 +168,7 @@ func (s *Server) UseStackExchange(exc StackExchange) error {
 	s.StackExchange = exc
 	//}
 
-	publisher.SetStackExchange(s)
+	setStackExchangePublisher(s)
 
 	return nil
 }

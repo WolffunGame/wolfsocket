@@ -1,8 +1,7 @@
-package publisher
+package wolfsocket
 
 import (
 	"errors"
-	"github.com/WolffunService/wolfsocket"
 	"github.com/WolffunService/wolfsocket/stackexchange/protos"
 )
 
@@ -10,7 +9,7 @@ var ErrUninitialized = errors.New("uninitialized")
 
 var p func(channel string, msgs []protos.ServerMessage) error
 
-func Init(server *wolfsocket.Server) {
+func initPublisher(server *Server) {
 	if server == nil {
 		return
 	}
@@ -18,15 +17,15 @@ func Init(server *wolfsocket.Server) {
 	p = do(server)
 }
 
-func SetStackExchange(server *wolfsocket.Server) {
-	if server == nil || server.StackExchange == nil {
+func setStackExchangePublisher(exc StackExchange) {
+	if exc == nil {
 		return
 	}
 
-	p = server.StackExchange.Publish
+	p = exc.Publish
 }
 
-func do(server *wolfsocket.Server) func(connID string, msgs []protos.ServerMessage) error {
+func do(server *Server) func(connID string, msgs []protos.ServerMessage) error {
 	return func(connID string, msgs []protos.ServerMessage) error {
 		conn := server.GetConnections()[connID]
 		if conn == nil {
@@ -34,7 +33,7 @@ func do(server *wolfsocket.Server) func(connID string, msgs []protos.ServerMessa
 		}
 
 		for _, msg := range msgs {
-			m := wolfsocket.Message{
+			m := Message{
 				Namespace: msg.Namespace,
 				Event:     msg.EventName,
 				Body:      msg.Body,
