@@ -168,7 +168,7 @@ func (s *Server) UseStackExchange(exc StackExchange) error {
 	s.StackExchange = exc
 	//}
 
-	setStackExchangePublisher(s)
+	setStackExchangePublisher(exc)
 
 	return nil
 }
