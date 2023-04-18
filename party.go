@@ -12,6 +12,7 @@ type Party interface {
 	SetPartyID(partyID string)
 
 	Broadcast(eventName string, body []byte, opts ...options.BroadcastOption)
+	GetChannel() string
 
 	Create(nsConn *NSConn) error
 	Join(nsConn *NSConn, playerInfo []byte) error
@@ -119,4 +120,8 @@ func (p *BaseParty) PartyInfo() []byte {
 
 func (p *BaseParty) getChannel() string {
 	return prefixParty + p.ID
+}
+
+func (p *BaseParty) GetChannel() string {
+	return p.getChannel()
 }
