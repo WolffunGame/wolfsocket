@@ -46,6 +46,7 @@ func do(server *wolfsocket.Server) func(connID string, msgs []protos.ServerMessa
 	}
 }
 
+// Publish don't forget to assign the namespace for the mgss if needed
 func Publish(channel string, msgs ...protos.ServerMessage) error {
 	if p != nil {
 		return p(channel, msgs)
