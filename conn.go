@@ -184,14 +184,6 @@ func (c *Conn) Server() *Server {
 	return c.server
 }
 
-const (
-	CtxKeyFindMatchVersion = "findMatchVersion"
-	CtxKeyGameVersion      = "gameVersion"
-	CtxKeyTicketCache      = "ticketCache"
-	CtxKeyPlayerProto      = "playerProto"
-	CtxKeyPlayerInfo       = "playerInfo"
-)
-
 // Set sets a value to this connection's store.
 func (c *Conn) Set(key string, value interface{}) {
 	c.storeMutex.Lock()
