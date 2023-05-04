@@ -175,6 +175,13 @@ func (ns *NSConn) replyPartyJoin(msg Message) error {
 	return nil
 }
 
+func (ns *NSConn) ForceLeaveParty() error {
+	return ns.askPartyLeave(Message{
+		Namespace: ns.namespace,
+		Event:     OnPartyLeave,
+	})
+}
+
 // remote request
 func (ns *NSConn) askPartyLeave(msg Message) error {
 	if ns == nil {
