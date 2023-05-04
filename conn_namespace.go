@@ -35,6 +35,8 @@ type NSConn struct {
 
 	Party Party
 
+	friends *Friends
+
 	roomsChatMutex sync.RWMutex
 	roomsChat      map[RoomChannel]RoomChat
 }
