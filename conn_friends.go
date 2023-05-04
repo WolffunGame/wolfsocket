@@ -34,6 +34,7 @@ func (nsConn *NSConn) AddFriends(friendIDs ...string) {
 	if numFriends > 0 {
 		nsConn.friends = &Friends{
 			listID: make(map[string]struct{}, numFriends),
+			nsConn: nsConn,
 		}
 		nsConn.friends.add(friendIDs...)
 
