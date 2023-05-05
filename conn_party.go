@@ -17,7 +17,7 @@ func (ns *NSConn) IsInParty() bool {
 }
 
 func (ns *NSConn) forceLeaveAll() {
-	ns.askPartyLeave(Message{
+	ns.AskPartyLeave(Message{
 		Namespace: ns.namespace,
 		Event:     OnPartyLeave,
 	})
@@ -25,7 +25,7 @@ func (ns *NSConn) forceLeaveAll() {
 	ns.leaveAllRoomChat()
 }
 
-func (ns *NSConn) askPartyCreate(msg Message) error {
+func (ns *NSConn) AskPartyCreate(msg Message) error {
 	if ns.Party != nil {
 		//already in party
 		msg.Err = errors.New("you already in party")
@@ -60,11 +60,11 @@ func (ns *NSConn) askPartyCreate(msg Message) error {
 	return nil
 }
 
-func (ns *NSConn) askPartyInvite(msg Message) {
+func (ns *NSConn) AskPartyInvite(msg Message) {
 	if ns.Party == nil {
 		msgCreate := msg
 		msgCreate.Event = OnPartyCreate
-		err := ns.askPartyCreate(msgCreate)
+		err := ns.AskPartyCreate(msgCreate)
 		if err != nil {
 			msg.Err = errors.New("cannot invite at this time")
 			ns.Conn.Write(msg)
@@ -97,7 +97,7 @@ func (ns *NSConn) askPartyInvite(msg Message) {
 func (ns *NSConn) replyPartyReplyInvitation(msg Message) {
 	if ns.Party != nil {
 		//force leave current party
-		err := ns.askPartyLeave(Message{
+		err := ns.AskPartyLeave(Message{
 			Namespace: ns.namespace,
 			Event:     OnPartyLeave,
 		})
@@ -141,7 +141,7 @@ func (ns *NSConn) replyPartyJoin(msg Message) error {
 			return msg.Err
 		}
 		//leave current joined party
-		err := ns.askPartyLeave(Message{
+		err := ns.AskPartyLeave(Message{
 			Namespace: ns.namespace,
 			Event:     OnPartyLeave,
 		})
@@ -176,14 +176,14 @@ func (ns *NSConn) replyPartyJoin(msg Message) error {
 }
 
 func (ns *NSConn) ForceLeaveParty() error {
-	return ns.askPartyLeave(Message{
+	return ns.AskPartyLeave(Message{
 		Namespace: ns.namespace,
 		Event:     OnPartyLeave,
 	})
 }
 
 // remote request
-func (ns *NSConn) askPartyLeave(msg Message) error {
+func (ns *NSConn) AskPartyLeave(msg Message) error {
 	if ns == nil {
 		msg.Err = errInvalidMethod
 		ns.Conn.Write(msg)

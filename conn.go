@@ -474,7 +474,7 @@ func (c *Conn) handleMessage(msg Message) error {
 	//}
 	case OnPartyCreate:
 		if ns, ok := c.tryNamespace(msg); ok {
-			_ = ns.askPartyCreate(msg)
+			_ = ns.AskPartyCreate(msg)
 		}
 	case OnPartyJoin:
 		if ns, ok := c.tryNamespace(msg); ok {
@@ -482,11 +482,11 @@ func (c *Conn) handleMessage(msg Message) error {
 		}
 	case OnPartyLeave:
 		if ns, ok := c.tryNamespace(msg); ok {
-			_ = ns.askPartyLeave(msg)
+			_ = ns.AskPartyLeave(msg)
 		}
 	case OnPartyInvite:
 		if ns, ok := c.tryNamespace(msg); ok {
-			ns.askPartyInvite(msg)
+			ns.AskPartyInvite(msg)
 		}
 	case OnPartyReplyInvitation:
 		if ns, ok := c.tryNamespace(msg); ok {
