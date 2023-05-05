@@ -377,7 +377,7 @@ func (exc *StackExchange) Reply(err error, token string) error {
 //}
 
 func (exc *StackExchange) publishCommand(channel string, b []byte) error {
-	wolfsocket.Debugf("publishCommand %s %s", channel, string(b))
+	//wolfsocket.Debugf("publishCommand %s %s", channel, string(b))
 	return exc.publisher.Publish(channel, b)
 }
 
