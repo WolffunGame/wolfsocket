@@ -119,7 +119,7 @@ func (ns *NSConn) replyPartyReplyInvitation(msg Message) {
 	//join
 	msgJoin := msg
 	msgJoin.Event = OnPartyJoin
-	err = ns.replyPartyJoin(msgJoin)
+	err = ns.AskPartyJoin(msgJoin)
 	if err != nil {
 		msg.Err = err
 		ns.Conn.Write(msg)
@@ -127,7 +127,7 @@ func (ns *NSConn) replyPartyReplyInvitation(msg Message) {
 	}
 }
 
-func (ns *NSConn) replyPartyJoin(msg Message) error {
+func (ns *NSConn) AskPartyJoin(msg Message) error {
 	if ns == nil {
 		msg.Err = errInvalidMethod
 		ns.Conn.Write(msg)
@@ -212,12 +212,12 @@ func (ns *NSConn) AskPartyLeave(msg Message) error {
 	//reply leave
 	ns.Conn.Write(msg)
 
-	ns.replyLeft()
+	ns.ReplyLeft()
 
 	return nil
 }
 
-func (ns *NSConn) replyLeft() {
+func (ns *NSConn) ReplyLeft() {
 	msg := Message{
 		Namespace: ns.namespace,
 		Event:     OnPartyLeft,

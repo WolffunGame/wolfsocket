@@ -478,7 +478,7 @@ func (c *Conn) handleMessage(msg Message) error {
 		}
 	case OnPartyJoin:
 		if ns, ok := c.tryNamespace(msg); ok {
-			_ = ns.replyPartyJoin(msg)
+			_ = ns.AskPartyJoin(msg)
 		}
 	case OnPartyLeave:
 		if ns, ok := c.tryNamespace(msg); ok {
