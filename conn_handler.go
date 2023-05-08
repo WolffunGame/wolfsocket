@@ -48,9 +48,9 @@ func (e Events) fireEvent(c *NSConn, msg Message) error {
 			return err
 		}
 
-		//if msg.wait != "" {
-		//	c.Conn.writeEmptyReply(msg.wait)
-		//}
+		if msg.wait != "" {
+			c.Conn.writeEmptyReplyBinary(msg.wait)
+		}
 		return nil
 	}
 

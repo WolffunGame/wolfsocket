@@ -949,6 +949,10 @@ func (c *Conn) writeEmptyReply(wait string) bool {
 	return c.write(genEmptyReplyToWait(wait), false)
 }
 
+func (c *Conn) writeEmptyReplyBinary(wait string) bool {
+	return c.write(genEmptyReplyToWait(wait), true)
+}
+
 // func (c *Conn) waitConfirmation(wait string) {
 // 	wait = genWaitConfirmation(wait)
 
