@@ -377,7 +377,7 @@ func (exc *StackExchange) Reply(err error, token string) error {
 //}
 
 func (exc *StackExchange) publishCommand(channel string, b []byte) error {
-	//wolfsocket.Debugf("publishCommand %s %s", channel, string(b))
+	wolfsocket.Debugf("publishCommand %s %s", channel)
 	return exc.publisher.Publish(channel, b)
 }
 
@@ -503,11 +503,11 @@ func (exc *StackExchange) AskServer(ctx context.Context, channel string, msg pro
 	msgChan := make(chan *nats.Msg, 1)
 	defer close(msgChan)
 
-	_, _ = subConn.ChanSubscribe(exc.getChannel(msg.Token), msgChan)
-	//if err != nil{
-	//	return nil, errConnect
-	//}
-	//defer sub.Unsubscribe()
+	sub, err := subConn.ChanSubscribe(exc.getChannel(msg.Token), msgChan)
+	if err != nil {
+		return nil, errConnect
+	}
+	defer sub.Unsubscribe()
 
 	if err = exc.publish(channel, &msg); err != nil {
 		return
