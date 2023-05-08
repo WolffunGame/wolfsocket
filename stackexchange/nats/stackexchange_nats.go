@@ -570,7 +570,7 @@ func (exc *StackExchange) ctx() context.Context {
 }
 
 type replyServer struct {
-	msg protos.ReplyMessage
+	msg *protos.ReplyMessage
 }
 
 func (r replyServer) Error() string {
@@ -583,8 +583,8 @@ type errCode interface {
 
 func isReplyServer(err error) *protos.ReplyMessage {
 	if err != nil {
-		if r, ok := err.(replyServer); ok {
-			return &r.msg
+		if r, ok := err.(replyServer); ok && r.msg != nil {
+			return r.msg
 		}
 		return &protos.ReplyMessage{Data: &protos.ReplyMessage_ErrorCode{ErrorCode: getErrCode(err)}}
 	}
@@ -599,7 +599,7 @@ func getErrCode(err error) int64 {
 	return 99
 }
 
-func ReplyServer(msg protos.ReplyMessage) error {
+func ReplyServer(msg *protos.ReplyMessage) error {
 	return replyServer{
 		msg: msg,
 	}
