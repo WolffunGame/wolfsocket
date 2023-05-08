@@ -18,6 +18,6 @@ message ServerMessage {
 message ReplyMessage {
   oneof data {
     bytes body = 1;
-    uint32 errorCode =2;
+    int64 errorCode =2;
   }
 }

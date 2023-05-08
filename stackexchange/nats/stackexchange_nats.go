@@ -576,7 +576,7 @@ func (r replyServer) Error() string {
 }
 
 type errCode interface {
-	ErrorCode() int
+	ErrorCode() uint32
 }
 
 func isReplyServer(err error) *protos.ReplyMessage {

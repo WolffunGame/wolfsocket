@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type ErrorCode int
+type ErrorCode int64
 
 const (
 	DefaultErr     ErrorCode = -99
@@ -41,8 +41,8 @@ func (err WSError) Error() string {
 	return strconv.Itoa(int(err.errorCode))
 }
 
-func (err WSError) ErrorCode() int {
-	return int(err.errorCode)
+func (err WSError) ErrorCode() int64 {
+	return int64(err.errorCode)
 }
 
 // stringer
