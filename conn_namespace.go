@@ -171,8 +171,13 @@ func (ns *NSConn) Get(key string, value interface{}) (err error) {
 	if ptr.Kind() != reflect.Ptr || ptr.IsNil() {
 		return errors.New("value parameter must be a non-nil pointer")
 	}
-	// assign the value to the pointer, using reflection
-	reflect.ValueOf(value).Elem().Set(reflect.ValueOf(v))
+	// if v is a pointer, set the value of the pointer to the value pointed to by v
+	if reflect.TypeOf(v).Kind() == reflect.Ptr {
+		reflect.ValueOf(value).Elem().Set(reflect.ValueOf(v).Elem())
+	} else {
+		// otherwise, assign the value to the pointer, using reflection
+		reflect.ValueOf(value).Elem().Set(reflect.ValueOf(v))
+	}
 	return
 }
 
