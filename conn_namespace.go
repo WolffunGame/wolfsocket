@@ -176,9 +176,9 @@ func (ns *NSConn) Get(key string, value interface{}) (err error) {
 		reflect.ValueOf(value).Elem().Set(reflect.ValueOf(v).Elem())
 	} else {
 		// otherwise, assign the value to the pointer, using reflection
-		reflect.ValueOf(value).Elem().Set(reflect.ValueOf(v))
+		reflect.ValueOf(value).Elem().Set(reflect.ValueOf(v).Convert(reflect.TypeOf(value).Elem()))
 	}
-	return
+	return nil
 }
 
 func (ns *NSConn) Write(eventName string, body []byte) {
