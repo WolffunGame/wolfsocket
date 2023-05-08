@@ -95,6 +95,15 @@ func (ns *NSConn) AskPartyInvite(msg Message) {
 }
 
 func (ns *NSConn) replyPartyReplyInvitation(msg Message) {
+	//fire event accept invite
+	err := ns.events.fireEvent(ns, msg)
+	if err != nil {
+		msg.Err = err
+		ns.Conn.Write(msg)
+		return
+	}
+
+	//if accept success - force leave current party
 	if ns.Party != nil {
 		//force leave current party
 		err := ns.AskPartyLeave(Message{
@@ -108,15 +117,7 @@ func (ns *NSConn) replyPartyReplyInvitation(msg Message) {
 		}
 	}
 
-	//fire event accept invite
-	err := ns.events.fireEvent(ns, msg)
-	if err != nil {
-		msg.Err = err
-		ns.Conn.Write(msg)
-		return
-	}
-
-	//join
+	//and ask join this party
 	msgJoin := msg
 	msgJoin.Event = OnPartyJoin
 	err = ns.AskPartyJoin(msgJoin)
