@@ -41,8 +41,8 @@ func (err WSError) Error() string {
 	return strconv.Itoa(int(err.errorCode))
 }
 
-func (err WSError) ErrorCode() ErrorCode {
-	return err.errorCode
+func (err WSError) ErrorCode() int {
+	return int(err.errorCode)
 }
 
 // stringer

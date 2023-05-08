@@ -576,7 +576,7 @@ func (r replyServer) Error() string {
 }
 
 type errCode interface {
-	ErrorCode() uint32
+	ErrorCode() int
 }
 
 func isReplyServer(err error) *protos.ReplyMessage {
@@ -595,6 +595,12 @@ func getErrCode(err error) uint32 {
 		return e.ErrorCode()
 	}
 	return 99
+}
+
+func ReplyServer(msg protos.ReplyMessage) error {
+	return replyServer{
+		msg: msg,
+	}
 }
 
 var (
