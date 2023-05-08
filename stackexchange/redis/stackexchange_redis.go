@@ -331,7 +331,7 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 
 	defer func() {
 		//reply if to
-		if serverMsg.Token == "" {
+		if serverMsg.Token != "" {
 			_ = exc.Reply(err, serverMsg.Token)
 		}
 	}()
@@ -396,7 +396,7 @@ func (exc *StackExchange) handleServerMessage(namespace, payload string, event w
 			msg.IsServer = true
 			errEvent := event.FireEvent(nsconn, msg)
 			//reply if to
-			if serverMsg.Token == "" {
+			if serverMsg.Token != "" {
 				_ = exc.Reply(errEvent, serverMsg.Token)
 			}
 

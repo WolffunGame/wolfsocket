@@ -314,10 +314,8 @@ func (exc *StackExchange) handleMessage(natsMsg *nats.Msg, conn *wolfsocket.Conn
 
 	defer func() {
 		//reply if to
-		fmt.Println("handleMessage reply ", serverMsg.Token)
-		if serverMsg.Token == "" {
-			errRep := exc.Reply(err, serverMsg.Token)
-			fmt.Println("handleMessage reply ", serverMsg.Token, errRep)
+		if serverMsg.Token != "" {
+			_ = exc.Reply(err, serverMsg.Token)
 		}
 	}()
 
