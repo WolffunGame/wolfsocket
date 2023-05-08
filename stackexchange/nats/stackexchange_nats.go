@@ -314,8 +314,10 @@ func (exc *StackExchange) handleMessage(natsMsg *nats.Msg, conn *wolfsocket.Conn
 
 	defer func() {
 		//reply if to
+		fmt.Println("handleMessage reply ", serverMsg.Token)
 		if serverMsg.Token == "" {
-			_ = exc.Reply(err, serverMsg.Token)
+			errRep := exc.Reply(err, serverMsg.Token)
+			fmt.Println("handleMessage reply ", serverMsg.Token, errRep)
 		}
 	}()
 
@@ -508,7 +510,7 @@ func (exc *StackExchange) AskServer(ctx context.Context, channel string, msg pro
 		return nil, errConnect
 	}
 	defer sub.Unsubscribe()
-
+	fmt.Println("ChanSubscribe ", exc.getChannel(msg.Token))
 	if err = exc.publish(channel, &msg); err != nil {
 		return
 	}
