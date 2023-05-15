@@ -48,6 +48,14 @@ func (nsConn *NSConn) RemoveFriends(friendIDs ...string) {
 	nsConn.friends.remove(friendIDs...)
 }
 
+// check is exist this friend
+func (nsConn *NSConn) CheckIsFriend(friendsID string) bool {
+	if nsConn.friends == nil {
+		return false
+	}
+	return nsConn.friends.exist(friendsID)
+}
+
 func (f *Friends) notify(msg protos.ServerMessage, opts ...options.BroadcastOption) error {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
@@ -73,6 +81,13 @@ func (f *Friends) remove(friendIDs ...string) {
 	for _, friendID := range friendIDs {
 		delete(f.listID, friendID)
 	}
+}
+
+func (f *Friends) exist(friendID string) bool {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+	_, exist := f.listID[friendID]
+	return exist
 }
 
 func getKeyNotify(userID string) string {
