@@ -14,7 +14,7 @@ type RoomChat interface {
 	Subscribe()
 	Unsubscribe()
 
-	Chat([]byte)
+	Chat(any)
 	Channel() RoomChannel
 }
 
@@ -44,12 +44,14 @@ func (rc *BaseRoomChat) Conn() *NSConn {
 	return rc.conn
 }
 
-func (rc *BaseRoomChat) Chat(messageData []byte) {
-	rc.conn.SBroadcast(rc.getChannel(), protos.ServerMessage{
-		EventName: OnReceiveMsgChat,
-		ToClient:  true,
-		Body:      messageData,
-	})
+func (rc *BaseRoomChat) Chat(messageData any) {
+	if msg, ok := messageData.([]byte); ok {
+		rc.conn.SBroadcast(rc.getChannel(), protos.ServerMessage{
+			EventName: OnReceiveMsgChat,
+			ToClient:  true,
+			Body:      msg,
+		})
+	}
 }
 
 func (rc *BaseRoomChat) Subscribe() {
