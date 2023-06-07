@@ -350,12 +350,12 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 		Body:      serverMsg.Body,
 		SetBinary: true,
 	}
-
-	//if msg for client, send back to remote
-	if serverMsg.ToClient {
-		conn.Write(msg)
-		return
-	}
+	//
+	////if msg for client, send back to remote
+	//if serverMsg.ToClient {
+	//	conn.Write(msg)
+	//	return
+	//}
 
 	//FireEvent and Reply to this message if this is a "ask"
 	msg.Token = serverMsg.Token
