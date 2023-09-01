@@ -1,0 +1,23 @@
+syntax = "proto3";
+//protoc --proto_path= --go_out=stackexchange/redis/. stackexchange/redis/protos/*.proto
+option go_package = "/protos";
+
+message ServerMessage {
+  string namespace = 1;
+  string eventName = 2;
+
+  string exceptSender = 3;
+  repeated string to = 4;
+  bytes body = 5;
+
+  string token = 6;//for askServer
+  bool toClient = 7;//for write Client
+
+}
+
+message ReplyMessage {
+  oneof data {
+    bytes body = 1;
+    int64 errorCode =2;
+  }
+}

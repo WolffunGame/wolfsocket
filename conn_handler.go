@@ -36,9 +36,22 @@ func (e Events) GetNamespaces() Namespaces {
 	return Namespaces{"": e}
 }
 
+func (e Events) FireEvent(c *NSConn, msg Message) error {
+	return e.fireEvent(c, msg)
+}
+
 func (e Events) fireEvent(c *NSConn, msg Message) error {
 	if h, ok := e[msg.Event]; ok {
-		return h(c, msg)
+		err := h(c, msg)
+
+		if err != nil {
+			return err
+		}
+
+		if msg.wait != "" {
+			c.Conn.writeEmptyReplyBinary(msg.wait)
+		}
+		return nil
 	}
 
 	if h, ok := e[OnAnyEvent]; ok {

@@ -2,42 +2,38 @@ package redis
 
 import (
 	"context"
-	"math/rand"
-	"time"
-
+	"errors"
+	"fmt"
 	"github.com/WolffunService/wolfsocket"
-
-	"github.com/mediocregopher/radix/v3"
+	"github.com/WolffunService/wolfsocket/metrics"
+	"github.com/WolffunService/wolfsocket/stackexchange/protos"
+	"github.com/redis/go-redis/v9"
+	"google.golang.org/protobuf/proto"
+	"log"
+	"strings"
+	"time"
 )
 
 // Config is used on the `StackExchange` package-level function.
 // Can be used to customize the redis client dialer.
-type Config struct {
-	// Network to use.
-	// Defaults to "tcp".
-	Network string
-	// Addr of a single redis server instance.
-	// See "Clusters" field for clusters support.
-	// Defaults to "127.0.0.1:6379".
-	Addr string
-	// Clusters a list of network addresses for clusters.
-	// If not empty "Addr" is ignored.
-	Clusters []string
+type Config = redis.UniversalOptions
+type Client = redis.UniversalClient
 
-	Password    string
-	DialTimeout time.Duration
-
-	// MaxActive defines the size connection pool.
-	// Defaults to 10.
-	MaxActive int
+type StackExchangeCfgs struct {
+	RedisConfig Config
+	Channel     string
+	wolfsocket.Namespaces
+	*wolfsocket.Server
 }
 
 // StackExchange is a `wolfsocket.StackExchange` for redis.
 type StackExchange struct {
-	channel string
+	prefixChannel string
 
-	pool     radix.Client
-	connFunc radix.ConnFunc
+	client Client
+
+	neffosServer *wolfsocket.Server
+	namespaces   wolfsocket.Namespaces
 
 	subscribers map[*wolfsocket.Conn]*subscriber
 
@@ -45,23 +41,24 @@ type StackExchange struct {
 	subscribe     chan subscribeAction
 	unsubscribe   chan unsubscribeAction
 	delSubscriber chan closeAction
+
+	close chan struct{}
 }
 
 type (
 	subscriber struct {
 		conn   *wolfsocket.Conn
-		pubSub radix.PubSubConn
-		msgCh  chan<- radix.PubSubMessage
+		pubSub *redis.PubSub
 	}
 
 	subscribeAction struct {
-		conn      *wolfsocket.Conn
-		namespace string
+		conn    *wolfsocket.Conn
+		channel string
 	}
 
 	unsubscribeAction struct {
-		conn      *wolfsocket.Conn
-		namespace string
+		conn    *wolfsocket.Conn
+		channel string
 	}
 
 	closeAction struct {
@@ -72,87 +69,42 @@ type (
 var _ wolfsocket.StackExchange = (*StackExchange)(nil)
 
 // NewStackExchange returns a new redis StackExchange.
-// The "channel" input argument is the channel prefix for publish and subscribe.
-func NewStackExchange(cfg Config, channel string) (*StackExchange, error) {
-	if cfg.Network == "" {
-		cfg.Network = "tcp"
-	}
-
-	if cfg.Addr == "" && len(cfg.Clusters) == 0 {
-		cfg.Addr = "127.0.0.1:6379"
-	}
-
-	if cfg.DialTimeout < 0 {
-		cfg.DialTimeout = 30 * time.Second
-	}
-
-	if cfg.MaxActive == 0 {
-		cfg.MaxActive = 10
-	}
-
-	var dialOptions []radix.DialOpt
-
-	if cfg.Password != "" {
-		dialOptions = append(dialOptions, radix.DialAuthPass(cfg.Password))
-	}
-
-	if cfg.DialTimeout > 0 {
-		dialOptions = append(dialOptions, radix.DialTimeout(cfg.DialTimeout))
-	}
-
-	var connFunc radix.ConnFunc
-	var client radix.Client
-
-	if len(cfg.Clusters) > 0 {
-		cluster, err := radix.NewCluster(cfg.Clusters, radix.ClusterPoolFunc(func(network, addr string) (radix.Client, error) {
-			return radix.NewPool(network, addr, cfg.MaxActive, radix.PoolConnFunc(func(network, addr string) (radix.Conn, error) {
-				return radix.Dial(network, addr, radix.DialAuthPass(cfg.Password))
-			}))
-		}))
-		if err != nil {
-			// maybe an
-			// ERR This instance has cluster support disabled
-			return nil, err
-		}
-		client = cluster
-
-		connFunc = func(network, addr string) (radix.Conn, error) {
-			topo := cluster.Topo()
-			node := topo[rand.Intn(len(topo))]
-			return radix.Dial(cfg.Network, node.Addr, dialOptions...)
-		}
-	} else {
-		connFunc = func(network, addr string) (radix.Conn, error) {
-			return radix.Dial(cfg.Network, cfg.Addr, dialOptions...)
-		}
-		pool, err := radix.NewPool("", "", cfg.MaxActive, radix.PoolConnFunc(connFunc))
-		if err != nil {
-			return nil, err
-		}
-
-		client = pool
-	}
-
+// The "prefixChannel" input argument is the channel prefix for publish and subscribe.
+func NewStackExchange(cfg StackExchangeCfgs) (*StackExchange, error) {
+	rdb := redis.NewUniversalClient(&cfg.RedisConfig)
 	exc := &StackExchange{
-		pool:     client,
-		connFunc: connFunc,
+		client: rdb,
 		// If you are using one redis server for multiple wolfsocket servers,
 		// use a different channel for each wolfsocket server.
 		// Otherwise a message sent from one server to all of its own clients will go
 		// to all clients of all wolfsocket servers that use the redis server.
 		// We could use multiple channels but overcomplicate things here.
-		channel: channel,
+		prefixChannel: cfg.Channel,
+		namespaces:    cfg.Namespaces,
+		neffosServer:  cfg.Server,
 
 		subscribers:   make(map[*wolfsocket.Conn]*subscriber),
 		addSubscriber: make(chan *subscriber),
 		delSubscriber: make(chan closeAction),
 		subscribe:     make(chan subscribeAction),
 		unsubscribe:   make(chan unsubscribeAction),
+		close:         make(chan struct{}),
 	}
 
 	go exc.run()
-
+	go exc.serverPubSub(cfg.Namespaces)
 	return exc, nil
+}
+
+func (exc *StackExchange) Close() {
+	exc.close <- struct{}{}
+	exc.client.Close()
+	close(exc.addSubscriber)
+	close(exc.delSubscriber)
+	close(exc.subscribe)
+	close(exc.unsubscribe)
+	//close everything
+
 }
 
 func (exc *StackExchange) run() {
@@ -160,149 +112,190 @@ func (exc *StackExchange) run() {
 		select {
 		case s := <-exc.addSubscriber:
 			exc.subscribers[s.conn] = s
-			// wolfsocket.Debugf("[%s] added to potential subscribers", s.conn.ID())
 		case m := <-exc.subscribe:
 			if sub, ok := exc.subscribers[m.conn]; ok {
-				channel := exc.getChannel(m.namespace, "", "")
-				sub.pubSub.PSubscribe(sub.msgCh, channel)
-				// wolfsocket.Debugf("[%s] subscribed to [%s] for namespace [%s]", m.conn.ID(), channel, m.namespace)
-				//	} else {
-				// wolfsocket.Debugf("[%s] tried to subscribe to [%s] namespace before 'OnConnect.addSubscriber'!", m.conn.ID(), m.namespace)
+				err := sub.pubSub.Subscribe(exc.ctx(), exc.getChannel(m.channel))
+				if err != nil {
+					exc.subscribe <- m //?? retry
+					continue
+				}
+				channel := strings.Split(m.channel, ".")
+				if len(channel) > 1 {
+					metrics.RecordHubSubscription(channel[0])
+				}
+				wolfsocket.Debugf(m.conn.ID(), " - Subscribe - ", exc.getChannel(m.channel), " success !!!")
 			}
 		case m := <-exc.unsubscribe:
 			if sub, ok := exc.subscribers[m.conn]; ok {
-				channel := exc.getChannel(m.namespace, "", "")
-				// wolfsocket.Debugf("[%s] unsubscribed from [%s]", channel)
-				sub.pubSub.PUnsubscribe(sub.msgCh, channel)
+				sub.pubSub.Unsubscribe(exc.ctx(), m.channel)
+				channel := strings.Split(m.channel, ".")
+				if len(channel) > 1 {
+					metrics.RecordHubUnsubscription(channel[0])
+				}
+				wolfsocket.Debugf(m.conn.ID(), " - Unsubscribe - ", exc.getChannel(m.channel), " success !!!")
 			}
 		case m := <-exc.delSubscriber:
 			if sub, ok := exc.subscribers[m.conn]; ok {
 				// wolfsocket.Debugf("[%s] disconnected", m.conn.ID())
-				sub.pubSub.Close()
-				close(sub.msgCh)
+				_ = sub.pubSub.Close()
 				delete(exc.subscribers, m.conn)
 			}
+
 		}
 	}
 }
 
-func (exc *StackExchange) getChannel(namespace, room, connID string) string {
-	if connID != "" {
-		// publish direct and let the server-side do the checks
-		// of valid or invalid message to send on this particular client.
-		return exc.channel + "." + connID + "."
+// Subscribe by namespace
+func (exc *StackExchange) serverPubSub(namespaces wolfsocket.Namespaces) {
+	pubSub := exc.client.Subscribe(nil)
+
+	for namespace, _ := range namespaces {
+		err := pubSub.Subscribe(exc.ctx(), exc.getChannel(namespace))
+		if err != nil {
+			log.Fatal("Cannot Subscribe namespace channel")
+		}
+	}
+	ch := pubSub.Channel()
+	// Loop to handle incoming messages
+	for {
+		select {
+		case msg := <-ch:
+			// Handle the message
+			namespace := strings.TrimPrefix(msg.Channel, exc.prefixChannel)
+			if event, ok := namespaces[namespace]; ok {
+				_ = exc.handleServerMessage(namespace, msg.Payload, event)
+			}
+		case <-exc.close:
+			// Unsubscribe from channels and close connection
+			for namespace := range namespaces {
+				pubSub.Unsubscribe(exc.ctx(), exc.getChannel(namespace))
+			}
+			pubSub.Close()
+			return
+		}
 	}
 
-	if namespace == "" && room != "" {
-		// should never happen but give info for debugging.
-		panic("namespace cannot be empty when sending to a namespace's room")
-	}
-
-	return exc.channel + "." + namespace + "."
 }
 
+//using getChannelV2
+//func (exc *StackExchange) getChannel(namespace, room, connID string) string {
+//	if connID != "" {
+//		// publish direct and let the server-side do the checks
+//		// of valid or invalid message to send on this particular client.
+//		return exc.prefixChannel + "." + connID + "."
+//	}
+//
+//	panic("connID cannot be empty")
+//
+//	//@Tinh comment, khong dung room
+//	//if namespace == "" && room != "" {
+//	//	//should never happen but give info for debugging.
+//	//	panic("namespace cannot be empty when sending to a namespace's room")
+//	//}
+//	//return exc.prefixChannel + "." + namespace + "."
+//}
+
 // OnConnect prepares the connection redis subscriber
-// and subscribes to itself for direct wolfsocket messages.
+// and subscribes to itself for direct wolfsocket messagexc.
 // It's called automatically after the wolfsocket server's OnConnect (if any)
 // on incoming client connections.
 func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
-	redisMsgCh := make(chan radix.PubSubMessage)
+	pubSub := exc.client.Subscribe(nil)
 	go func() {
-		for redisMsg := range redisMsgCh {
-			// wolfsocket.Debugf("[%s] send to client: [%s]", c.ID(), string(redisMsg.Message))
-			msg := c.DeserializeMessage(wolfsocket.BinaryMessage, redisMsg.Message)
-			msg.FromStackExchange = true
-
-			c.Write(msg)
+		for {
+			select {
+			case msg := <-pubSub.Channel():
+				exc.handleMessage(msg, c)
+			}
 		}
 	}()
-
-	pubSub := radix.PersistentPubSub("", "", exc.connFunc)
 	s := &subscriber{
 		conn:   c,
 		pubSub: pubSub,
-		msgCh:  redisMsgCh,
 	}
-	selfChannel := exc.getChannel("", "", c.ID())
-	pubSub.PSubscribe(redisMsgCh, selfChannel)
 
 	exc.addSubscriber <- s
+	return nil
+}
+
+func (exc *StackExchange) Publish(channel string, msgs []protos.ServerMessage) error {
+	for _, msg := range msgs {
+		if err := exc.publish(channel, &msg); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
 
-// Publish publishes messages through redis.
-// It's called automatically on wolfsocket broadcasting.
-func (exc *StackExchange) Publish(msgs []wolfsocket.Message) bool {
-	for _, msg := range msgs {
-		if !exc.publish(msg) {
-			return false
-		}
+func (exc *StackExchange) publish(channel string, msg *protos.ServerMessage) error {
+	if msg == nil || channel == "" {
+		return ErrChannelEmpty
 	}
 
-	return true
-}
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		return err
+	}
 
-func (exc *StackExchange) publish(msg wolfsocket.Message) bool {
-	// channel := exc.getMessageChannel(c.ID(), msg)
-	channel := exc.getChannel(msg.Namespace, msg.Room, msg.To)
-	// wolfsocket.Debugf("[%s] publish to channel [%s] the data [%s]\n", msg.FromExplicit, channel, string(msg.Serialize()))
-
-	err := exc.publishCommand(channel, msg.Serialize())
-	return err == nil
+	//return exc.redisClient.Publish(context.Background(), channel, data).Err()
+	return exc.publishCommand(exc.getChannel(channel), data)
 }
 
 func (exc *StackExchange) publishCommand(channel string, b []byte) error {
-	cmd := radix.FlatCmd(nil, "PUBLISH", channel, b)
-	return exc.pool.Do(cmd)
+	//cmd := radix.FlatCmd(nil, "PUBLISH", channel, b)
+	wolfsocket.Debugf("publishCommand %s %s", channel, string(b))
+	return exc.client.Publish(exc.ctx(), channel, b).Err()
 }
 
 // Ask implements the server Ask feature for redis. It blocks until response.
 func (exc *StackExchange) Ask(ctx context.Context, msg wolfsocket.Message, token string) (response wolfsocket.Message, err error) {
-	sub := radix.PersistentPubSub("", "", exc.connFunc)
-	msgCh := make(chan radix.PubSubMessage)
-	err = sub.Subscribe(msgCh, token)
-	if err != nil {
-		return
-	}
-	defer sub.Close()
-
-	if !exc.publish(msg) {
-		return response, wolfsocket.ErrWrite
-	}
-
-	select {
-	case <-ctx.Done():
-		err = ctx.Err()
-	case redisMsg := <-msgCh:
-		response = wolfsocket.DeserializeMessage(wolfsocket.TextMessage, redisMsg.Message, false, false)
-		err = response.Err
-	}
-
-	return
+	panic("use ask server")
 }
+
+//	sub := exc.client.Subscribe(nil)
+//	err = sub.Subscribe(ctx, token)
+//	if err != nil {
+//		return
+//	}
+//	defer sub.Close()
+//
+//	if !exc.publish(msg) {
+//		return response, wolfsocket.ErrWrite
+//	}
+//
+//	select {
+//	case <-ctx.Done():
+//		err = ctx.Err()
+//	case redisMsg := <-sub.Channel():
+//		response = wolfsocket.DeserializeMessage(wolfsocket.TextMessage, []byte(redisMsg.Payload), false, false)
+//		err = response.Err
+//	}
+//
+//	return
+//}
 
 // NotifyAsk notifies and unblocks a "msg" subscriber, called on a server connection's read when expects a result.
 func (exc *StackExchange) NotifyAsk(msg wolfsocket.Message, token string) error {
+	//
 	msg.ClearWait()
+	fmt.Println("haha???")
 	return exc.publishCommand(token, msg.Serialize())
 }
 
-// Subscribe subscribes to a specific namespace,
-// it's called automatically on wolfsocket namespace connected.
-func (exc *StackExchange) Subscribe(c *wolfsocket.Conn, namespace string) {
+// Subscribe subscribes to a specific channel,
+func (exc *StackExchange) Subscribe(c *wolfsocket.Conn, channel string) {
 	exc.subscribe <- subscribeAction{
-		conn:      c,
-		namespace: namespace,
+		conn:    c,
+		channel: channel,
 	}
 }
 
-// Unsubscribe unsubscribes from a specific namespace,
-// it's called automatically on wolfsocket namespace disconnect.
-func (exc *StackExchange) Unsubscribe(c *wolfsocket.Conn, namespace string) {
+// Unsubscribe unsubscribes from a specific channel,
+func (exc *StackExchange) Unsubscribe(c *wolfsocket.Conn, channel string) {
 	exc.unsubscribe <- unsubscribeAction{
-		conn:      c,
-		namespace: namespace,
+		conn:    c,
+		channel: channel,
 	}
 }
 
@@ -315,3 +308,190 @@ func (exc *StackExchange) Unsubscribe(c *wolfsocket.Conn, namespace string) {
 func (exc *StackExchange) OnDisconnect(c *wolfsocket.Conn) {
 	exc.delSubscriber <- closeAction{conn: c}
 }
+
+// SubjectPrefix.type.id
+func (exc *StackExchange) getChannel(key string) string {
+	return fmt.Sprintf("%s.%s", exc.prefixChannel, key)
+}
+
+func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocket.Conn) (err error) {
+	if redisMsg == nil {
+		//log
+		return
+	}
+
+	serverMsg := protos.ServerMessage{}
+	err = proto.Unmarshal([]byte(redisMsg.Payload), &serverMsg)
+	if err != nil {
+		return
+	}
+	if conn.Is(serverMsg.ExceptSender) {
+		return
+	}
+
+	defer func() {
+		//reply if to
+		if serverMsg.Token != "" {
+			_ = exc.Reply(err, serverMsg.Token)
+		}
+	}()
+
+	namespace := serverMsg.Namespace
+
+	//get namespace conn
+	nsconn := conn.Namespace(namespace)
+	if nsconn == nil {
+		return
+	}
+
+	msg := wolfsocket.Message{
+		Namespace: namespace,
+		Event:     serverMsg.EventName,
+		Body:      serverMsg.Body,
+		SetBinary: true,
+	}
+	//
+	////if msg for client, send back to remote
+	//if serverMsg.ToClient {
+	//	conn.Write(msg)
+	//	return
+	//}
+
+	//FireEvent and Reply to this message if this is a "ask"
+	msg.Token = serverMsg.Token
+	msg.IsServer = true
+
+	err = nsconn.FireEvent(msg)
+
+	return
+}
+
+func (exc *StackExchange) handleServerMessage(namespace, payload string, event wolfsocket.Events) error {
+	serverMsg := protos.ServerMessage{}
+	err := proto.Unmarshal([]byte(payload), &serverMsg)
+	if err != nil {
+		return err
+	}
+
+	receivers := serverMsg.To
+	if len(receivers) == 0 {
+		return nil
+	}
+
+	exc.neffosServer.FindAndFire(func(conn *wolfsocket.Conn) {
+		//try get nsconn
+		if nsconn := conn.Namespace(namespace); nsconn != nil {
+			msg := wolfsocket.Message{
+				Namespace:    namespace,
+				Event:        serverMsg.EventName,
+				FromExplicit: serverMsg.ExceptSender,
+				Body:         serverMsg.Body,
+			}
+			if serverMsg.ToClient {
+				conn.Write(msg)
+				return
+			}
+			//FireEvent and Reply to this message if this is a "ask"
+			msg.Token = serverMsg.Token
+			msg.IsServer = true
+			errEvent := event.FireEvent(nsconn, msg)
+			//reply if to
+			if serverMsg.Token != "" {
+				_ = exc.Reply(errEvent, serverMsg.Token)
+			}
+
+		}
+	}, receivers)
+
+	return nil
+}
+
+func (exc *StackExchange) AskServer(ctx context.Context, channel string, msg protos.ServerMessage) (response *protos.ReplyMessage, err error) {
+	if msg.Token == "" || channel == "" {
+		err = wolfsocket.ErrInvalidPayload
+		return
+	}
+	sub := exc.client.Subscribe(nil)
+	err = sub.Subscribe(ctx, exc.getChannel(msg.Token))
+	if err != nil {
+		return
+	}
+	defer sub.Close()
+	if err = exc.publish(channel, &msg); err != nil {
+		return
+	}
+
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	case redisMsg := <-sub.Channel():
+		response = &protos.ReplyMessage{}
+		err = proto.Unmarshal([]byte(redisMsg.Payload), response)
+		return
+	}
+
+	return
+}
+
+func (exc *StackExchange) ctx() context.Context {
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	return ctx
+}
+
+func (exc *StackExchange) Reply(err error, token string) error {
+	if token == "" {
+		return nil
+	}
+	msg := isReplyServer(err)
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	channel := exc.getChannel(token)
+	return exc.publishCommand(channel, data)
+}
+
+type replyServer struct {
+	msg protos.ReplyMessage
+}
+
+func (r replyServer) Error() string {
+	return ""
+}
+
+type errCode interface {
+	ErrorCode() int64
+}
+
+func isReplyServer(err error) *protos.ReplyMessage {
+	if err != nil {
+		if r, ok := err.(replyServer); ok {
+			return &r.msg
+		}
+		return &protos.ReplyMessage{Data: &protos.ReplyMessage_ErrorCode{ErrorCode: getErrCode(err)}}
+	}
+
+	return &protos.ReplyMessage{Data: &protos.ReplyMessage_Body{Body: []byte{}}}
+}
+
+func getErrCode(err error) int64 {
+	if e, ok := err.(errCode); ok {
+		return e.ErrorCode()
+	}
+	return -99
+}
+
+// reply ask server
+func ReplyServer(msg protos.ReplyMessage) error {
+	return replyServer{msg}
+}
+
+var (
+	ErrChannelEmpty = errors.New("We do not accept messages with empty channel")
+
+	// InvalidPrefix is returned when a message with a channel prefix
+	// that does not match the expected prefix is received during subscription.
+	// The message is not executed to prevent unauthorized access or incorrect behavior.
+	InvalidPrefix = errors.New("message received with invalid prefix")
+)

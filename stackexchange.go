@@ -2,6 +2,7 @@ package wolfsocket
 
 import (
 	"context"
+	"github.com/WolffunService/wolfsocket/stackexchange/protos"
 )
 
 // StackExchange is an optional interface
@@ -25,7 +26,8 @@ type StackExchange interface {
 
 	// Publish should publish messages through a stackexchange.
 	// It's called automatically on neffos broadcasting.
-	Publish(msgs []Message) bool
+	//Publish(msgs []Message) bool
+
 	// Subscribe should subscribe to a specific namespace,
 	// it's called automatically on neffos namespace connected.
 	Subscribe(c *Conn, namespace string)
@@ -35,10 +37,17 @@ type StackExchange interface {
 	// Ask should be able to perform a server Ask to a specific client or to all clients
 	// It blocks until response from a specific client if msg.To is filled,
 	// otherwise will return on the first responder's reply.
+	//DEPRECATED:  use AskServer
 	Ask(ctx context.Context, msg Message, token string) (Message, error)
 	// NotifyAsk should notify and unblock a subscribed connection for this
 	// specific message, "token" is the neffos wait signal for this message.
 	NotifyAsk(msg Message, token string) error
+
+	// PublishServer should publish messages through a stackexchange.
+	// It's called automatically on neffos broadcasting when toClient equal false.
+	Publish(channel string, msgs []protos.ServerMessage) error
+
+	AskServer(ctx context.Context, channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error)
 }
 
 // StackExchangeInitializer is an optional interface for a `StackExchange`.
@@ -61,69 +70,69 @@ func stackExchangeInit(s StackExchange, namespaces Namespaces) error {
 	return nil
 }
 
-// internal use only when more than one stack exchanges are registered.
-type stackExchangeWrapper struct {
-	// read-only fields.
-	parent  StackExchange
-	current StackExchange
-}
-
-func wrapStackExchanges(existingExc StackExchange, newExc StackExchange) StackExchange {
-	return &stackExchangeWrapper{
-		parent:  existingExc,
-		current: newExc,
-	}
-}
-
-func (s *stackExchangeWrapper) OnConnect(c *Conn) error {
-	// return on first error, do not wrap errors,
-	// the server should NOT run if at least one is errored.
-	err := s.parent.OnConnect(c)
-	if err != nil {
-		return err
-	}
-
-	return s.current.OnConnect(c)
-}
-
-func (s *stackExchangeWrapper) OnDisconnect(c *Conn) {
-	s.parent.OnDisconnect(c)
-	s.current.OnDisconnect(c)
-}
-
-func (s *stackExchangeWrapper) Publish(msgs []Message) bool {
-	// keep try on the next but return false on any failure.
-	okParent := s.parent.Publish(msgs)
-	okCurrent := s.current.Publish(msgs)
-
-	return okParent && okCurrent
-}
-
-func (s *stackExchangeWrapper) Ask(ctx context.Context, msg Message, token string) (Message, error) {
-	// we run Ask and if one is failing then we keep trying for all stackexchanges.
-	msg, err := s.parent.Ask(ctx, msg, token)
-	if err != nil {
-		msg, err = s.current.Ask(ctx, msg, token)
-	}
-
-	return msg, err
-}
-
-func (s *stackExchangeWrapper) NotifyAsk(msg Message, token string) error {
-	err := s.parent.NotifyAsk(msg, token)
-	if err != nil {
-		return s.current.NotifyAsk(msg, token)
-	}
-
-	return nil
-}
-
-func (s *stackExchangeWrapper) Subscribe(c *Conn, namespace string) {
-	s.parent.Subscribe(c, namespace)
-	s.current.Subscribe(c, namespace)
-}
-
-func (s *stackExchangeWrapper) Unsubscribe(c *Conn, namespace string) {
-	s.parent.Unsubscribe(c, namespace)
-	s.current.Unsubscribe(c, namespace)
-}
+//// internal use only when more than one stack exchanges are registered.
+//type stackExchangeWrapper struct {
+//	// read-only fields.
+//	parent  StackExchange
+//	current StackExchange
+//}
+//
+//func wrapStackExchanges(existingExc StackExchange, newExc StackExchange) StackExchange {
+//	return &stackExchangeWrapper{
+//		parent:  existingExc,
+//		current: newExc,
+//	}
+//}
+//
+//func (s *stackExchangeWrapper) OnConnect(c *Conn) error {
+//	// return on first error, do not wrap errors,
+//	// the server should NOT run if at least one is errored.
+//	err := s.parent.OnConnect(c)
+//	if err != nil {
+//		return err
+//	}
+//
+//	return s.current.OnConnect(c)
+//}
+//
+//func (s *stackExchangeWrapper) OnDisconnect(c *Conn) {
+//	s.parent.OnDisconnect(c)
+//	s.current.OnDisconnect(c)
+//}
+//
+//func (s *stackExchangeWrapper) Publish(msgs []Message) bool {
+//	// keep try on the next but return false on any failure.
+//	okParent := s.parent.Publish(msgs)
+//	okCurrent := s.current.Publish(msgs)
+//
+//	return okParent && okCurrent
+//}
+//
+//func (s *stackExchangeWrapper) Ask(ctx context.Context, msg Message, token string) (Message, error) {
+//	// we run Ask and if one is failing then we keep trying for all stackexchanges.
+//	msg, err := s.parent.Ask(ctx, msg, token)
+//	if err != nil {
+//		msg, err = s.current.Ask(ctx, msg, token)
+//	}
+//
+//	return msg, err
+//}
+//
+//func (s *stackExchangeWrapper) NotifyAsk(msg Message, token string) error {
+//	err := s.parent.NotifyAsk(msg, token)
+//	if err != nil {
+//		return s.current.NotifyAsk(msg, token)
+//	}
+//
+//	return nil
+//}
+//
+//func (s *stackExchangeWrapper) Subscribe(c *Conn, namespace string) {
+//	s.parent.Subscribe(c, namespace)
+//	s.current.Subscribe(c, namespace)
+//}
+//
+//func (s *stackExchangeWrapper) Unsubscribe(c *Conn, namespace string) {
+//	s.parent.Unsubscribe(c, namespace)
+//	s.current.Unsubscribe(c, namespace)
+//}

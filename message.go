@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/WolffunService/wolfsocket/wserror"
 	"strconv"
 	"strings"
 	"time"
 )
+
+//TODO refactor message
 
 // The Message is the structure which describes the incoming and outcoming data.
 // Emitter's "body" argument is the `Message.Body` field.
@@ -98,6 +101,12 @@ type Message struct {
 
 	// if server or client should write using Binary message or if the incoming message was readen as binary.
 	SetBinary bool
+
+	//This message is received from some other server
+	IsServer bool
+
+	//This token for reply server message
+	Token string
 }
 
 func (m *Message) isConnect() bool {
@@ -308,7 +317,10 @@ func serializeOutput(wait, namespace, room, event string,
 		if b, ok := isReply(err); ok {
 			body = b
 		} else {
-			body = []byte(err.Error())
+			//body = []byte(err.Error())
+			wsErr := wserror.Error(err)
+			Debugf("WSError ", wsErr.String(), wsErr.ErrorCode())
+			body = wsErr.Bytes()
 			isErrorByte = trueByte
 		}
 	}
