@@ -297,6 +297,7 @@ func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
 	return nil
 }
 
+// handle message from pubsub
 func (exc *StackExchange) handleMessage(natsMsg *nats.Msg, conn *wolfsocket.Conn) (err error) {
 	if natsMsg == nil {
 		//log
