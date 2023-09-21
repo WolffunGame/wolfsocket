@@ -16,13 +16,13 @@ type Friends struct {
 }
 
 func (nsConn *NSConn) SubscribeNotify(friendIDs ...string) {
-	nsConn.Subscribe(getKeyNotify(nsConn.ID())) //tu sub ban than
+	nsConn.Subscribe(GetKeyNotify(nsConn.ID())) //tu sub ban than
 
 	nsConn.AddFriends(friendIDs...)
 }
 
 func (nsConn *NSConn) UnSubscribeNotify() {
-	nsConn.Unsubscribe(getKeyNotify(nsConn.ID()))
+	nsConn.Unsubscribe(GetKeyNotify(nsConn.ID()))
 	nsConn.friends = nil
 }
 
@@ -65,7 +65,7 @@ func (f *Friends) notify(msg protos.ServerMessage, opts ...options.BroadcastOpti
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 	for friendID, _ := range f.listID {
-		if err := f.nsConn.SBroadcast(getKeyNotify(friendID), msg, opts...); err != nil {
+		if err := f.nsConn.SBroadcast(GetKeyNotify(friendID), msg, opts...); err != nil {
 			return err
 		}
 	}
@@ -95,6 +95,6 @@ func (f *Friends) exist(friendID string) bool {
 	return exist
 }
 
-func getKeyNotify(userID string) string {
+func GetKeyNotify(userID string) string {
 	return notifyKey + userID
 }
