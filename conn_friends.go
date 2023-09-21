@@ -21,6 +21,11 @@ func (nsConn *NSConn) SubscribeNotify(friendIDs ...string) {
 	nsConn.AddFriends(friendIDs...)
 }
 
+func (nsConn *NSConn) UnSubscribeNotify() {
+	nsConn.Unsubscribe(getKeyNotify(nsConn.ID()))
+	nsConn.friends = nil
+}
+
 func (nsConn *NSConn) Notify(msg protos.ServerMessage, opts ...options.BroadcastOption) error {
 	if nsConn.friends == nil {
 		return nil
