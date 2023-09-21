@@ -251,6 +251,14 @@ func (exc *StackExchange) run() {
 				if sub.subConn.IsConnected() {
 					sub.subConn.Close()
 				}
+				//unsub recore metric
+				for subject, _ := range sub.subscriptions {
+					channel := strings.Split(subject, ".")
+					if len(channel) > 2 { //[prefix.channel.channelID]
+						//record prefix
+						metrics.RecordHubUnsubscription(channel[1])
+					}
+				}
 
 				delete(exc.subscribers, m.conn)
 			}
