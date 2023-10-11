@@ -6,8 +6,6 @@ import (
 	"sync"
 )
 
-const notifyKey = "notify."
-
 type Friends struct {
 	nsConn *NSConn
 
@@ -16,13 +14,14 @@ type Friends struct {
 }
 
 func (nsConn *NSConn) SubscribeNotify(friendIDs ...string) {
-	nsConn.Subscribe(getKeyNotify(nsConn.ID())) //tu sub ban than
+	//@tinh comment, sai chung topic luc connect
+	//nsConn.Subscribe(getKeyNotify(nsConn.ID())) //tu sub ban than
 
 	nsConn.AddFriends(friendIDs...)
 }
 
 func (nsConn *NSConn) UnSubscribeNotify() {
-	nsConn.Unsubscribe(getKeyNotify(nsConn.ID()))
+	//nsConn.Unsubscribe(getKeyNotify(nsConn.ID()))
 	nsConn.friends = nil
 }
 
@@ -65,7 +64,7 @@ func (f *Friends) notify(msg protos.ServerMessage, opts ...options.BroadcastOpti
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 	for friendID, _ := range f.listID {
-		if err := f.nsConn.SBroadcast(getKeyNotify(friendID), msg, opts...); err != nil {
+		if err := f.nsConn.SBroadcast(friendID, msg, opts...); err != nil {
 			return err
 		}
 	}
@@ -93,8 +92,4 @@ func (f *Friends) exist(friendID string) bool {
 	defer f.mutex.Unlock()
 	_, exist := f.listID[friendID]
 	return exist
-}
-
-func getKeyNotify(userID string) string {
-	return notifyKey + userID
 }
