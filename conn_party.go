@@ -2,6 +2,7 @@ package wolfsocket
 
 import (
 	"errors"
+
 	"github.com/WolffunService/wolfsocket/wserror"
 )
 
@@ -21,6 +22,8 @@ func (ns *NSConn) forceLeaveAll() {
 		Namespace: ns.namespace,
 		Event:     OnPartyLeave,
 	})
+
+	ns.DisconnectGuild()
 
 	ns.leaveAllRoomChat()
 }
@@ -246,4 +249,28 @@ func (ns *NSConn) replyJoined() {
 	ns.JoinRoomChat(NewRoomChat(ns.Party.PartyID(), PartyChatRoom, ns))
 
 	ns.Conn.Write(msg)
+}
+
+func (ns *NSConn) DisconnectGuild() error {
+	if ns == nil {
+		return nil
+	}
+
+	// guild := ns.Guild
+	// if guild == nil {
+	// 	return nil
+	// }
+
+	msg := Message{
+		Namespace: ns.namespace,
+		Event:     OnGuildDisconnect,
+		IsLocal:   true,
+	}
+
+	err := ns.events.fireEvent(ns, msg)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

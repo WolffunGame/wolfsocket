@@ -423,6 +423,7 @@ func (c *Conn) handleQueue() {
 // In the future it may be exposed by an error listener.
 var ErrInvalidPayload = errors.New("invalid payload")
 
+// handle message from client via socket
 func (c *Conn) handleMessage(msg Message) error {
 	if msg.isInvalid {
 		return ErrInvalidPayload

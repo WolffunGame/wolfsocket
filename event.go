@@ -66,6 +66,14 @@ var (
 
 	OnChat           = "_OnChat"
 	OnReceiveMsgChat = "_ReceiveMsgChat"
+
+	// guild: connect, join, disconnect, leave,...
+	// "application": 
+	//- connect: incr + ws.connect
+	//- join: check in party + call connect
+	// disconnect, leave, kick: similar
+	OnGuildConnect = "_OnGuildConnect" // check in guild then incr + ws.connect
+	OnGuildDisconnect = "_OnGuildDisconnect" // if not nil then decr + ws.disconnect
 )
 
 // IsSystemEvent reports whether the "event" is a system event,
@@ -77,7 +85,8 @@ func IsSystemEvent(event string) bool {
 	case OnNamespaceConnect, OnNamespaceConnected, OnNamespaceDisconnect,
 		OnRoomJoin, OnRoomJoined, OnRoomLeave, OnRoomLeft,
 		OnPartyJoin, OnPartyJoined, OnPartyLeave, OnPartyLeft,
-		OnPartySomebodyJoined, OnPartySomebodyLeft:
+		OnPartySomebodyJoined, OnPartySomebodyLeft,
+		OnGuildConnect, OnGuildDisconnect:
 		return true
 	default:
 		return false

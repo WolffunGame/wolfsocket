@@ -34,6 +34,7 @@ type NSConn struct {
 	value reflect.Value
 
 	Party Party
+	Guild Guild
 
 	friends *Friends
 
