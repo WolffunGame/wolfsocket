@@ -2,7 +2,7 @@ package wolfsocket
 
 import (
 	"errors"
-	"github.com/WolffunService/wolfsocket/wserror"
+	"wolfsocket/wserror"
 )
 
 var forcedJoin = false

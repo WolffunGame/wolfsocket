@@ -2,7 +2,7 @@ package wolfsocket
 
 import (
 	"errors"
-	"github.com/WolffunService/wolfsocket/stackexchange/protos"
+	"wolfsocket/stackexchange/protos"
 )
 
 var ErrUninitialized = errors.New("uninitialized")

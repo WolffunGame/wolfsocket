@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/WolffunService/wolfsocket/metrics"
-	"github.com/WolffunService/wolfsocket/stackexchange/protos"
 	"github.com/segmentio/ksuid"
 	"log"
 	"net/http"
@@ -14,6 +12,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"wolfsocket/metrics"
+	"wolfsocket/stackexchange/protos"
 
 	uuid "github.com/iris-contrib/go.uuid"
 )

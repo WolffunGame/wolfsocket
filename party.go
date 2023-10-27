@@ -1,9 +1,9 @@
 package wolfsocket
 
 import (
-	"github.com/WolffunService/wolfsocket/options"
-	"github.com/WolffunService/wolfsocket/stackexchange/protos"
 	uuid "github.com/iris-contrib/go.uuid"
+	"wolfsocket/options"
+	"wolfsocket/stackexchange/protos"
 )
 
 type Party interface {

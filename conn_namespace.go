@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/WolffunService/wolfsocket/options"
-	"github.com/WolffunService/wolfsocket/stackexchange/protos"
 	"reflect"
 	"sync"
+	"wolfsocket/options"
+	"wolfsocket/stackexchange/protos"
 )
 
 // NSConn describes a connection connected to a specific namespace,

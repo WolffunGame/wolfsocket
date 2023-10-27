@@ -3,12 +3,12 @@ package wolfsocket
 import (
 	"context"
 	"errors"
-	"github.com/WolffunService/wolfsocket/metrics"
 	"net"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
+	"wolfsocket/metrics"
 )
 
 type (

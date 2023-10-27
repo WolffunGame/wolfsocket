@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/WolffunService/wolfsocket"
-	"github.com/WolffunService/wolfsocket/metrics"
-	"github.com/WolffunService/wolfsocket/stackexchange/protos"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/proto"
 	"log"
 	"strings"
 	"time"
+	"wolfsocket"
+	"wolfsocket/metrics"
+	"wolfsocket/stackexchange/protos"
 )
 
 // Config is used on the `StackExchange` package-level function.

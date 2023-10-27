@@ -3,7 +3,7 @@ package gorilla
 import (
 	"net/http"
 
-	neffos "github.com/WolffunService/wolfsocket"
+	neffos "wolfsocket"
 
 	gorilla "github.com/gorilla/websocket"
 )

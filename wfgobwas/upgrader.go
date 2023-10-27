@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	neffos "github.com/WolffunService/wolfsocket"
+	neffos "wolfsocket"
 
 	"github.com/RussellLuo/timingwheel"
 	gobwas "github.com/gobwas/ws"

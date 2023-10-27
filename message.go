@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/WolffunService/wolfsocket/wserror"
 	"strconv"
 	"strings"
 	"time"
+	"wolfsocket/wserror"
 )
 
 //TODO refactor message

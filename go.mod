@@ -1,4 +1,4 @@
-module github.com/WolffunService/wolfsocket
+module wolfsocket
 
 go 1.18
 
@@ -33,4 +33,4 @@ require (
 	golang.org/x/sys v0.7.0 // indirect
 )
 
-replace github.com/kataras/neffos => github.com/WolffunService/wolfsocket v0.1.2
+replace github.com/kataras/neffos => wolfsocket v0.1.2

@@ -3,7 +3,7 @@ package gobwas
 import (
 	"context"
 
-	"github.com/WolffunService/wolfsocket"
+	"wolfsocket"
 
 	gobwas "github.com/gobwas/ws"
 )

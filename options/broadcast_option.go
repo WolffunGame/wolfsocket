@@ -1,7 +1,7 @@
 package options
 
 import (
-	"github.com/WolffunService/wolfsocket/stackexchange/protos"
+	"wolfsocket/stackexchange/protos"
 )
 
 type BroadcastOption = Option[protos.ServerMessage]

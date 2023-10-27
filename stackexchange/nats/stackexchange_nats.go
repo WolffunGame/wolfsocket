@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/WolffunService/wolfsocket/metrics"
-	"github.com/WolffunService/wolfsocket/stackexchange/protos"
 	"github.com/golang/protobuf/proto"
 	"strings"
 	"sync"
 	"time"
+	"wolfsocket/metrics"
+	"wolfsocket/stackexchange/protos"
 
-	"github.com/WolffunService/wolfsocket"
+	"wolfsocket"
 
 	"github.com/nats-io/nats.go"
 )

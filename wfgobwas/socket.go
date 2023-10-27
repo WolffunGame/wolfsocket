@@ -1,7 +1,6 @@
 package wfgobwas
 
 import (
-	neffos "github.com/WolffunService/wolfsocket"
 	"io"
 	"io/ioutil"
 	"log"
@@ -9,6 +8,7 @@ import (
 	"net/http"
 	"sync"
 	"time"
+	neffos "wolfsocket"
 
 	"github.com/RussellLuo/timingwheel"
 	gobwas "github.com/gobwas/ws"
