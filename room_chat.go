@@ -1,6 +1,7 @@
 package wolfsocket
 
 import (
+	"errors"
 	"wolfsocket/stackexchange/protos"
 )
 
@@ -54,6 +55,22 @@ func (rc *BaseRoomChat) Chat(messageData any) {
 	}
 }
 
+func Chat(server *Server, roomID string, messageData any) error {
+	if server == nil {
+		return errors.New("wsServer is nil")
+	}
+
+	if msg, ok := messageData.([]byte); ok {
+		return server.SBroadcastWithOptions(getRoomChatChannel(roomID), protos.ServerMessage{
+			EventName: OnReceiveMsgChat,
+			ToClient:  true,
+			Body:      msg,
+		})
+	}
+
+	return nil
+}
+
 func (rc *BaseRoomChat) Subscribe() {
 	rc.conn.Subscribe(rc.getChannel())
 }
@@ -71,10 +88,14 @@ func (rc *BaseRoomChat) RoomChatID() string {
 
 // return channel pubsub chat room
 func (rc *BaseRoomChat) getChannel() string {
-	return prefixRoomChat + rc.ID
+	return getRoomChatChannel(rc.ID)
 }
 
 // return channel type of this room
 func (rc *BaseRoomChat) Channel() RoomChannel {
 	return rc.channel
+}
+
+func getRoomChatChannel(roomID string) string {
+	return prefixRoomChat + roomID
 }
