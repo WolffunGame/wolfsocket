@@ -61,7 +61,7 @@ func Chat(server *Server, roomID string, messageData any) error {
 	}
 
 	if msg, ok := messageData.([]byte); ok {
-		return server.SBroadcastWithOptions(getRoomChatChannel(roomID), protos.ServerMessage{
+		return server.SBroadcast(getRoomChatChannel(roomID), protos.ServerMessage{
 			EventName: OnReceiveMsgChat,
 			ToClient:  true,
 			Body:      msg,

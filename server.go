@@ -13,7 +13,6 @@ import (
 	"sync/atomic"
 	"time"
 	"wolfsocket/metrics"
-	"wolfsocket/options"
 	"wolfsocket/stackexchange/protos"
 
 	uuid "github.com/iris-contrib/go.uuid"
@@ -600,14 +599,6 @@ func Exclude(connID string) fmt.Stringer { return stringerValue{connID} }
 // SBroadcast Broadcast server
 func (s *Server) SBroadcast(channel string, msgs ...protos.ServerMessage) error {
 	return s.StackExchange.Publish(channel, msgs)
-}
-
-func (s *Server) SBroadcastWithOptions(channel string, msg protos.ServerMessage, opts ...options.BroadcastOption) error {
-	err := mergeOptions(&msg, opts...)
-	if err != nil {
-		return err
-	}
-	return s.SBroadcast(channel, msg)
 }
 
 func (s *Server) AskServer(ctx context.Context, channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
