@@ -103,7 +103,7 @@ func (exc *StackExchange) Close() {
 	close(exc.delSubscriber)
 	close(exc.subscribe)
 	close(exc.unsubscribe)
-	//close everything
+	// close everything
 
 }
 
@@ -116,7 +116,7 @@ func (exc *StackExchange) run() {
 			if sub, ok := exc.subscribers[m.conn]; ok {
 				err := sub.pubSub.Subscribe(exc.ctx(), exc.getChannel(m.channel))
 				if err != nil {
-					exc.subscribe <- m //?? retry
+					exc.subscribe <- m // ?? retry
 					continue
 				}
 				channel := strings.Split(m.channel, ".")
@@ -177,8 +177,8 @@ func (exc *StackExchange) serverPubSub(namespaces wolfsocket.Namespaces) {
 
 }
 
-//using getChannelV2
-//func (exc *StackExchange) getChannel(namespace, room, connID string) string {
+// using getChannelV2
+// func (exc *StackExchange) getChannel(namespace, room, connID string) string {
 //	if connID != "" {
 //		// publish direct and let the server-side do the checks
 //		// of valid or invalid message to send on this particular client.
@@ -193,7 +193,7 @@ func (exc *StackExchange) serverPubSub(namespaces wolfsocket.Namespaces) {
 //	//	panic("namespace cannot be empty when sending to a namespace's room")
 //	//}
 //	//return exc.prefixChannel + "." + namespace + "."
-//}
+// }
 
 // OnConnect prepares the connection redis subscriber
 // and subscribes to itself for direct wolfsocket messagexc.
@@ -218,14 +218,8 @@ func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
 	return nil
 }
 
-func (exc *StackExchange) Publish(channel string, msgs []protos.ServerMessage) error {
-	for _, msg := range msgs {
-		if err := exc.publish(channel, &msg); err != nil {
-			return err
-		}
-	}
-
-	return nil
+func (exc *StackExchange) Publish(channel string, msg protos.ServerMessage) error {
+	return exc.publish(channel, &msg)
 }
 
 func (exc *StackExchange) publish(channel string, msg *protos.ServerMessage) error {
@@ -238,12 +232,12 @@ func (exc *StackExchange) publish(channel string, msg *protos.ServerMessage) err
 		return err
 	}
 
-	//return exc.redisClient.Publish(context.Background(), channel, data).Err()
+	// return exc.redisClient.Publish(context.Background(), channel, data).Err()
 	return exc.publishCommand(exc.getChannel(channel), data)
 }
 
 func (exc *StackExchange) publishCommand(channel string, b []byte) error {
-	//cmd := radix.FlatCmd(nil, "PUBLISH", channel, b)
+	// cmd := radix.FlatCmd(nil, "PUBLISH", channel, b)
 	wolfsocket.Debugf("publishCommand %s %s", channel, string(b))
 	return exc.client.Publish(exc.ctx(), channel, b).Err()
 }
@@ -273,7 +267,7 @@ func (exc *StackExchange) Ask(ctx context.Context, msg wolfsocket.Message, token
 //	}
 //
 //	return
-//}
+// }
 
 // NotifyAsk notifies and unblocks a "msg" subscriber, called on a server connection's read when expects a result.
 func (exc *StackExchange) NotifyAsk(msg wolfsocket.Message, token string) error {
@@ -316,7 +310,7 @@ func (exc *StackExchange) getChannel(key string) string {
 
 func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocket.Conn) (err error) {
 	if redisMsg == nil {
-		//log
+		// log
 		return
 	}
 
@@ -330,7 +324,7 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 	}
 
 	defer func() {
-		//reply if to
+		// reply if to
 		if serverMsg.Token != "" {
 			_ = exc.Reply(err, serverMsg.Token)
 		}
@@ -338,7 +332,7 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 
 	namespace := serverMsg.Namespace
 
-	//get namespace conn
+	// get namespace conn
 	nsconn := conn.Namespace(namespace)
 	if nsconn == nil {
 		return
@@ -351,13 +345,13 @@ func (exc *StackExchange) handleMessage(redisMsg *redis.Message, conn *wolfsocke
 		SetBinary: true,
 	}
 	//
-	////if msg for client, send back to remote
-	//if serverMsg.ToClient {
+	// //if msg for client, send back to remote
+	// if serverMsg.ToClient {
 	//	conn.Write(msg)
 	//	return
-	//}
+	// }
 
-	//FireEvent and Reply to this message if this is a "ask"
+	// FireEvent and Reply to this message if this is a "ask"
 	msg.Token = serverMsg.Token
 	msg.IsServer = true
 
@@ -379,7 +373,7 @@ func (exc *StackExchange) handleServerMessage(namespace, payload string, event w
 	}
 
 	exc.neffosServer.FindAndFire(func(conn *wolfsocket.Conn) {
-		//try get nsconn
+		// try get nsconn
 		if nsconn := conn.Namespace(namespace); nsconn != nil {
 			msg := wolfsocket.Message{
 				Namespace:    namespace,
@@ -391,11 +385,11 @@ func (exc *StackExchange) handleServerMessage(namespace, payload string, event w
 				conn.Write(msg)
 				return
 			}
-			//FireEvent and Reply to this message if this is a "ask"
+			// FireEvent and Reply to this message if this is a "ask"
 			msg.Token = serverMsg.Token
 			msg.IsServer = true
 			errEvent := event.FireEvent(nsconn, msg)
-			//reply if to
+			// reply if to
 			if serverMsg.Token != "" {
 				_ = exc.Reply(errEvent, serverMsg.Token)
 			}

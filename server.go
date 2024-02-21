@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 	"wolfsocket/metrics"
+	"wolfsocket/options"
 	"wolfsocket/stackexchange/protos"
 
 	uuid "github.com/iris-contrib/go.uuid"
@@ -81,7 +82,7 @@ type Server struct {
 
 	count uint64
 
-	//like connections,used in case need to find Conn by connID
+	// like connections,used in case need to find Conn by connID
 	connsByID         map[string]*Conn
 	find              chan findAction
 	connections       map[*Conn]struct{}
@@ -139,7 +140,7 @@ func New(upgrader Upgrader, connHandler ConnHandler) *Server {
 		IDGenerator:       DefaultIDGenerator,
 	}
 
-	//init publisher
+	// init publisher
 	initPublisher(s)
 
 	go s.start()
@@ -162,11 +163,11 @@ func (s *Server) UseStackExchange(exc StackExchange) error {
 		return err
 	}
 
-	//if s.usesStackExchange() {
+	// if s.usesStackExchange() {
 	//	s.StackExchange = wrapStackExchanges(s.StackExchange, exc)
-	//} else {
+	// } else {
 	s.StackExchange = exc
-	//}
+	// }
 
 	setStackExchangePublisher(exc)
 
@@ -421,7 +422,7 @@ func (s *Server) Upgrade(
 			// So, maybe it's a better solution to transform that process into a blocking state which can handle any `Server#OnConnect` error and return it at client's `Dial`.
 			// Think more later today.
 			// Done but with a lot of code.... will try to cleanup some things.
-			//println("OnConnect error: " + err.Error())
+			// println("OnConnect error: " + err.Error())
 			c.readiness.unwait(err)
 			// No need to disconnect here, connection's .Close will be called on readiness ch errored.
 
@@ -430,7 +431,7 @@ func (s *Server) Upgrade(
 		}
 	}
 
-	//println("OnConnect does not exist or no error, fire unwait")
+	// println("OnConnect does not exist or no error, fire unwait")
 	c.readiness.unwait(nil)
 
 	return c, nil
@@ -560,7 +561,7 @@ func Exclude(connID string) fmt.Stringer { return stringerValue{connID} }
 // doesn't wait for a publish to complete to all clients before any
 // next broadcast call. To change that behavior set the `Server.SyncBroadcaster` to true
 // before server start.
-//func (s *Server) Broadcast(exceptSender fmt.Stringer, msgs ...Message) {
+// func (s *Server) Broadcast(exceptSender fmt.Stringer, msgs ...Message) {
 //
 //	if exceptSender != nil {
 //		var fromExplicit, from string
@@ -594,15 +595,19 @@ func Exclude(connID string) fmt.Stringer { return stringerValue{connID} }
 //	}
 //
 //	s.broadcaster.broadcast(msgs)
-//}
+// }
 
 // SBroadcast Broadcast server
-func (s *Server) SBroadcast(channel string, msgs ...protos.ServerMessage) error {
-	return s.StackExchange.Publish(channel, msgs)
+func (s *Server) SBroadcast(channel string, msg protos.ServerMessage, opts ...options.BroadcastOption) error {
+	err := mergeOptions(&msg, opts...)
+	if err != nil {
+		return err
+	}
+	return s.StackExchange.Publish(channel, msg)
 }
 
 func (s *Server) AskServer(ctx context.Context, channel string, msg protos.ServerMessage) (*protos.ReplyMessage, error) {
-	//You cannot ask client in this case or ask more than 1 conn
+	// You cannot ask client in this case or ask more than 1 conn
 	if channel == msg.Namespace && len(msg.To) != 1 {
 		return nil, ErrInvalidPayload
 	}
@@ -632,23 +637,23 @@ func (s *Server) Ask(ctx context.Context, msg Message) (Message, error) {
 		return s.StackExchange.Ask(ctx, msg, msg.wait)
 	}
 	return msg, nil
-	//ch := make(chan Message)
-	//s.waitingMessagesMutex.Lock()
-	//s.waitingMessages[msg.wait] = ch
-	//s.waitingMessagesMutex.Unlock()
+	// ch := make(chan Message)
+	// s.waitingMessagesMutex.Lock()
+	// s.waitingMessages[msg.wait] = ch
+	// s.waitingMessagesMutex.Unlock()
 	//
-	//s.Broadcast(nil, msg)
+	// s.Broadcast(nil, msg)
 	//
-	//select {
-	//case <-ctx.Done():
+	// select {
+	// case <-ctx.Done():
 	//	return Message{}, ctx.Err()
-	//case receive := <-ch:
+	// case receive := <-ch:
 	//	s.waitingMessagesMutex.Lock()
 	//	delete(s.waitingMessages, msg.wait)
 	//	s.waitingMessagesMutex.Unlock()
 	//
 	//	return receive, receive.Err
-	//}
+	// }
 }
 
 // GetConnectionsByNamespace can be used as an alternative way to retrieve

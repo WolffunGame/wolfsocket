@@ -26,8 +26,8 @@ type NSConn struct {
 	// Dynamically channels/rooms for each connected namespace.
 	// Client can ask to join, server can forcely join a connection to a room.
 	// Namespace(room(fire event)).
-	//rooms      map[string]*Room
-	//roomsMutex sync.RWMutex
+	// rooms      map[string]*Room
+	// roomsMutex sync.RWMutex
 
 	// value is just a temporarily value.
 	// Storage across event callbacks for this namespace.
@@ -46,7 +46,7 @@ func newNSConn(c *Conn, namespace string, events Events) *NSConn {
 		Conn:      c,
 		namespace: namespace,
 		events:    events,
-		//rooms:     make(map[string]*Room),
+		// rooms:     make(map[string]*Room),
 		roomsChat: make(map[RoomChannel]RoomChat),
 	}
 }
@@ -94,11 +94,7 @@ func (ns *NSConn) AskRemote(ctx context.Context, event string, body []byte) (Mes
 // only need input event-name + body data
 func (nsConn *NSConn) SBroadcast(channel string, msg protos.ServerMessage, opts ...options.BroadcastOption) error {
 	msg.Namespace = nsConn.namespace
-	err := mergeOptions(&msg, opts...)
-	if err != nil {
-		return err
-	}
-	return nsConn.server().SBroadcast(channel, msg)
+	return nsConn.server().SBroadcast(channel, msg, opts...)
 }
 
 func (nsConn *NSConn) AskServer(ctx context.Context, channel string, msg protos.ServerMessage, opts ...options.BroadcastOption) (*protos.ReplyMessage, error) {
@@ -236,8 +232,8 @@ func (ns *NSConn) FireEvent(msg Message) error {
 }
 
 //
-//// Room method returns a joined `Room`.
-//func (ns *NSConn) Room(roomName string) *Room {
+// // Room method returns a joined `Room`.
+// func (ns *NSConn) Room(roomName string) *Room {
 //	if ns == nil {
 //		return nil
 //	}
@@ -247,10 +243,10 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	ns.roomsMutex.RUnlock()
 //
 //	return room
-//}
+// }
 //
-//// Rooms returns a slice copy of the joined rooms.
-//func (ns *NSConn) Rooms() []*Room {
+// // Rooms returns a slice copy of the joined rooms.
+// func (ns *NSConn) Rooms() []*Room {
 //	ns.roomsMutex.RLock()
 //	rooms := make([]*Room, len(ns.rooms))
 //	i := 0
@@ -261,11 +257,11 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	ns.roomsMutex.RUnlock()
 //
 //	return rooms
-//}
+// }
 //
-//// LeaveAll method sends a remote and local leave room signal `OnRoomLeave` to and for all rooms
-//// and fires the `OnRoomLeft` event if succeed.
-//func (ns *NSConn) LeaveAll(ctx context.Context) error {
+// // LeaveAll method sends a remote and local leave room signal `OnRoomLeave` to and for all rooms
+// // and fires the `OnRoomLeft` event if succeed.
+// func (ns *NSConn) LeaveAll(ctx context.Context) error {
 //	if ns == nil {
 //		return nil
 //	}
@@ -282,9 +278,9 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	}
 //
 //	return nil
-//}
+// }
 //
-//func (ns *NSConn) forceLeaveAll(isLocal bool) {
+// func (ns *NSConn) forceLeaveAll(isLocal bool) {
 //	ns.roomsMutex.Lock()
 //	defer ns.roomsMutex.Unlock()
 //
@@ -300,9 +296,9 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //
 //		leaveMsg.Event = OnRoomLeave
 //	}
-//}
+// }
 //
-//func (ns *NSConn) askPartyJoin(ctx context.Context, partyID string) (*Party, error) {
+// func (ns *NSConn) askPartyJoin(ctx context.Context, partyID string) (*Party, error) {
 //	if ns.Party != nil {
 //		return nil, errors.New("rời phòng cái đi rồi yêu cầu cái khác bạn eiii")
 //	}
@@ -330,9 +326,9 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	joinMsg.Event = OnRoomJoined
 //	ns.events.fireEvent(ns, joinMsg)
 //	return room, nil
-//}
+// }
 //
-//func (ns *NSConn) replyRoomJoin(msg Message) {
+// func (ns *NSConn) replyRoomJoin(msg Message) {
 //	if ns == nil || msg.wait == "" || msg.isNoOp {
 //		return
 //	}
@@ -356,9 +352,9 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	}
 //
 //	ns.Conn.writeEmptyReply(msg.wait)
-//}
+// }
 //
-//func (ns *NSConn) askRoomLeave(ctx context.Context, msg Message, lock bool) error {
+// func (ns *NSConn) askRoomLeave(ctx context.Context, msg Message, lock bool) error {
 //	if ns == nil {
 //		return nil
 //	}
@@ -400,9 +396,9 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	ns.events.fireEvent(ns, msg)
 //
 //	return nil
-//}
+// }
 //
-//func (ns *NSConn) replyRoomLeave(msg Message) {
+// func (ns *NSConn) replyRoomLeave(msg Message) {
 //	if ns == nil || msg.wait == "" || msg.isNoOp {
 //		return
 //	}
@@ -444,23 +440,23 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	ns.events.fireEvent(ns, msg)
 //
 //	ns.Conn.writeEmptyReply(msg.wait)
-//}
+// }
 
-//#region Tinh comment room, chuyen qua party
-//Room
-//#
-//// JoinRoom method can be used to join a connection to a specific room, rooms are dynamic.
-//// Returns the joined `Room`.
-//func (ns *NSConn) JoinRoom(ctx context.Context, roomName string) (*Room, error) {
+// #region Tinh comment room, chuyen qua party
+// Room
+// #
+// // JoinRoom method can be used to join a connection to a specific room, rooms are dynamic.
+// // Returns the joined `Room`.
+// func (ns *NSConn) JoinRoom(ctx context.Context, roomName string) (*Room, error) {
 //	if ns == nil {
 //		return nil, ErrWrite
 //	}
 //
 //	return ns.askRoomJoin(ctx, roomName)
-//}
+// }
 //
-//// Room method returns a joined `Room`.
-//func (ns *NSConn) Room(roomName string) *Room {
+// // Room method returns a joined `Room`.
+// func (ns *NSConn) Room(roomName string) *Room {
 //	if ns == nil {
 //		return nil
 //	}
@@ -470,10 +466,10 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	ns.roomsMutex.RUnlock()
 //
 //	return room
-//}
+// }
 //
-//// Rooms returns a slice copy of the joined rooms.
-//func (ns *NSConn) Rooms() []*Room {
+// // Rooms returns a slice copy of the joined rooms.
+// func (ns *NSConn) Rooms() []*Room {
 //	ns.roomsMutex.RLock()
 //	rooms := make([]*Room, len(ns.rooms))
 //	i := 0
@@ -484,11 +480,11 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	ns.roomsMutex.RUnlock()
 //
 //	return rooms
-//}
+// }
 //
-//// LeaveAll method sends a remote and local leave room signal `OnRoomLeave` to and for all rooms
-//// and fires the `OnRoomLeft` event if succeed.
-//func (ns *NSConn) LeaveAll(ctx context.Context) error {
+// // LeaveAll method sends a remote and local leave room signal `OnRoomLeave` to and for all rooms
+// // and fires the `OnRoomLeft` event if succeed.
+// func (ns *NSConn) LeaveAll(ctx context.Context) error {
 //	if ns == nil {
 //		return nil
 //	}
@@ -505,9 +501,9 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	}
 //
 //	return nil
-//}
+// }
 //
-//func (ns *NSConn) forceLeaveAll(isLocal bool) {
+// func (ns *NSConn) forceLeaveAll(isLocal bool) {
 //	ns.roomsMutex.Lock()
 //	defer ns.roomsMutex.Unlock()
 //
@@ -523,9 +519,9 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //
 //		leaveMsg.Event = OnRoomLeave
 //	}
-//}
+// }
 //
-//func (ns *NSConn) askRoomJoin(ctx context.Context, roomName string) (*Room, error) {
+// func (ns *NSConn) askRoomJoin(ctx context.Context, roomName string) (*Room, error) {
 //	ns.roomsMutex.RLock()
 //	room, ok := ns.rooms[roomName]
 //	ns.roomsMutex.RUnlock()
@@ -558,9 +554,9 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	joinMsg.Event = OnRoomJoined
 //	ns.events.fireEvent(ns, joinMsg)
 //	return room, nil
-//}
+// }
 //
-//func (ns *NSConn) replyRoomJoin(msg Message) {
+// func (ns *NSConn) replyRoomJoin(msg Message) {
 //	if ns == nil || msg.wait == "" || msg.isNoOp {
 //		return
 //	}
@@ -584,9 +580,9 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	}
 //
 //	ns.Conn.writeEmptyReply(msg.wait)
-//}
+// }
 //
-//func (ns *NSConn) askRoomLeave(ctx context.Context, msg Message, lock bool) error {
+// func (ns *NSConn) askRoomLeave(ctx context.Context, msg Message, lock bool) error {
 //	if ns == nil {
 //		return nil
 //	}
@@ -628,9 +624,9 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	ns.events.fireEvent(ns, msg)
 //
 //	return nil
-//}
+// }
 //
-//func (ns *NSConn) replyRoomLeave(msg Message) {
+// func (ns *NSConn) replyRoomLeave(msg Message) {
 //	if ns == nil || msg.wait == "" || msg.isNoOp {
 //		return
 //	}
@@ -672,6 +668,6 @@ func (ns *NSConn) FireEvent(msg Message) error {
 //	ns.events.fireEvent(ns, msg)
 //
 //	ns.Conn.writeEmptyReply(msg.wait)
-//}
-//EndRoom
-//#endregion
+// }
+// EndRoom
+// #endregion

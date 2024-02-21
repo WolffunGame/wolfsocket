@@ -162,8 +162,8 @@ func NewStackExchange(cfg StackExchangeCfgs, options ...nats.Option) (*StackExch
 	exc := &StackExchange{
 		opts:          opts,
 		SubjectPrefix: cfg.SubjectPrefix,
-		//neffosServer:  cfg.Server,
-		//namespaces:    cfg.Namespaces,
+		// neffosServer:  cfg.Server,
+		// namespaces:    cfg.Namespaces,
 		publisher: pubConn,
 
 		subscribers:   make(map[*wolfsocket.Conn]*subscriber),
@@ -174,7 +174,7 @@ func NewStackExchange(cfg StackExchangeCfgs, options ...nats.Option) (*StackExch
 	}
 
 	go exc.run()
-	//go exc.serverPubSub(cfg.Namespaces)
+	// go exc.serverPubSub(cfg.Namespaces)
 
 	return exc, nil
 }
@@ -201,7 +201,7 @@ func (exc *StackExchange) run() {
 				}
 				channel := strings.Split(m.channel, ".")
 				if len(channel) > 1 {
-					//Record prefix (party, chat,notify,..)
+					// Record prefix (party, chat,notify,..)
 					metrics.RecordHubSubscription(channel[0])
 				}
 				sub.subConn.Flush()
@@ -240,7 +240,7 @@ func (exc *StackExchange) run() {
 
 					channel := strings.Split(m.channel, ".")
 					if len(channel) > 1 {
-						//record prefix
+						// record prefix
 						metrics.RecordHubUnsubscription(channel[0])
 					}
 				}
@@ -251,11 +251,11 @@ func (exc *StackExchange) run() {
 				if sub.subConn.IsConnected() {
 					sub.subConn.Close()
 				}
-				//unsub recore metric
+				// unsub recore metric
 				for subject, _ := range sub.subscriptions {
 					channel := strings.Split(subject, ".")
-					if len(channel) > 2 { //[prefix.channel.channelID]
-						//record prefix
+					if len(channel) > 2 { // [prefix.channel.channelID]
+						// record prefix
 						metrics.RecordHubUnsubscription(channel[1])
 					}
 				}
@@ -272,12 +272,12 @@ func (exc *StackExchange) getChannel(key string) string {
 }
 
 func (exc StackExchange) makeMsgHandler(c *wolfsocket.Conn) nats.MsgHandler {
-	//return func(m *nats.Msg) {
+	// return func(m *nats.Msg) {
 	//	msg := c.DeserializeMessage(wolfsocket.TextMessage, m.Data)
 	//	msg.FromStackExchange = true
 	//
 	//	c.Write(msg)
-	//}
+	// }
 
 	return func(msg *nats.Msg) {
 		exc.handleMessage(msg, c)
@@ -307,7 +307,7 @@ func (exc *StackExchange) OnConnect(c *wolfsocket.Conn) error {
 
 func (exc *StackExchange) handleMessage(natsMsg *nats.Msg, conn *wolfsocket.Conn) (err error) {
 	if natsMsg == nil {
-		//log
+		// log
 		return
 	}
 
@@ -321,7 +321,7 @@ func (exc *StackExchange) handleMessage(natsMsg *nats.Msg, conn *wolfsocket.Conn
 	}
 
 	defer func() {
-		//reply if to
+		// reply if to
 		if serverMsg.Token != "" {
 			_ = exc.Reply(err, serverMsg.Token)
 		}
@@ -329,7 +329,7 @@ func (exc *StackExchange) handleMessage(natsMsg *nats.Msg, conn *wolfsocket.Conn
 
 	namespace := serverMsg.Namespace
 
-	//get namespace conn
+	// get namespace conn
 	nsconn := conn.Namespace(namespace)
 	if nsconn == nil {
 		return
@@ -342,13 +342,13 @@ func (exc *StackExchange) handleMessage(natsMsg *nats.Msg, conn *wolfsocket.Conn
 		SetBinary: true,
 	}
 
-	//if msg for client, send back to remote
+	// if msg for client, send back to remote
 	if serverMsg.ToClient {
 		conn.Write(msg)
 		return
 	}
 
-	//FireEvent and Reply to this message if this is a "ask"
+	// FireEvent and Reply to this message if this is a "ask"
 	msg.Token = serverMsg.Token
 	msg.IsServer = true
 
@@ -374,7 +374,7 @@ func (exc *StackExchange) Reply(err error, token string) error {
 
 // Publish publishes messages through nats.
 // It's called automatically on wolfsocket broadcasting.
-//func (exc *StackExchange) Publish(msgs []wolfsocket.Message) bool {
+// func (exc *StackExchange) Publish(msgs []wolfsocket.Message) bool {
 //	for _, msg := range msgs {
 //		if !exc.publish(msg) {
 //			return false
@@ -382,14 +382,14 @@ func (exc *StackExchange) Reply(err error, token string) error {
 //	}
 //
 //	return true
-//}
+// }
 
 func (exc *StackExchange) publishCommand(channel string, b []byte) error {
-	//wolfsocket.Debugf("publishCommand %s", channel)
+	// wolfsocket.Debugf("publishCommand %s", channel)
 	return exc.publisher.Publish(channel, b)
 }
 
-//func (exc *StackExchange) publish(msg wolfsocket.Message) bool {
+// func (exc *StackExchange) publish(msg wolfsocket.Message) bool {
 //	subject := exc.getSubject(msg.Namespace, msg.Room, msg.To)
 //	b := msg.Serialize()
 //
@@ -397,51 +397,51 @@ func (exc *StackExchange) publishCommand(channel string, b []byte) error {
 //	// Let's not add logging options, let
 //	// any custom nats error handler alone.
 //	return err == nil
-//}
+// }
 
 // Ask implements server Ask for nats. It blocks.
 func (exc *StackExchange) Ask(ctx context.Context, msg wolfsocket.Message, token string) (response wolfsocket.Message, err error) {
 	// for some reason we can't use the exc.publisher.Subscribe,
 	// so create a new connection for subscription which will be terminated on message receive or timeout.
-	//subConn, err := exc.opts.Connect()
+	// subConn, err := exc.opts.Connect()
 	//
-	//if err != nil {
+	// if err != nil {
 	//	return
-	//}
+	// }
 	//
-	//ch := make(chan wolfsocket.Message)
-	//sub, err := subConn.Subscribe(token, func(m *nats.Msg) {
+	// ch := make(chan wolfsocket.Message)
+	// sub, err := subConn.Subscribe(token, func(m *nats.Msg) {
 	//	ch <- wolfsocket.DeserializeMessage(wolfsocket.TextMessage, m.Data, false, false)
-	//})
+	// })
 	//
-	//if err != nil {
+	// if err != nil {
 	//	return response, err
-	//}
+	// }
 	//
-	//defer sub.Unsubscribe()
-	//defer subConn.Close()
+	// defer sub.Unsubscribe()
+	// defer subConn.Close()
 	//
-	//if !exc.publish(msg) {
+	// if !exc.publish(msg) {
 	//	return response, wolfsocket.ErrWrite
-	//}
+	// }
 	//
-	//select {
-	//case <-ctx.Done():
+	// select {
+	// case <-ctx.Done():
 	//	return response, ctx.Err()
-	//case response = <-ch:
+	// case response = <-ch:
 	//	return response, response.Err
-	//}
+	// }
 	return response, nil
 }
 
 // NotifyAsk notifies and unblocks a "msg" subscriber, called on a server connection's read when expects a result.
 func (exc *StackExchange) NotifyAsk(msg wolfsocket.Message, token string) error {
-	//err := exc.publisher.Publish(token, msg.Serialize())
-	//if err != nil {
+	// err := exc.publisher.Publish(token, msg.Serialize())
+	// if err != nil {
 	//	return err
-	//}
-	//exc.publisher.Flush()
-	//return exc.publisher.LastError()
+	// }
+	// exc.publisher.Flush()
+	// return exc.publisher.LastError()
 	return nil
 }
 
@@ -473,13 +473,8 @@ func (exc *StackExchange) OnDisconnect(c *wolfsocket.Conn) {
 	exc.delSubscriber <- closeAction{conn: c}
 }
 
-func (exc *StackExchange) Publish(channel string, msgs []protos.ServerMessage) error {
-	for _, msg := range msgs {
-		if err := exc.publish(channel, &msg); err != nil {
-			return err
-		}
-	}
-	return nil
+func (exc *StackExchange) Publish(channel string, msg protos.ServerMessage) error {
+	return exc.publish(channel, &msg)
 }
 
 func (exc *StackExchange) publish(channel string, msg *protos.ServerMessage) error {
@@ -492,7 +487,7 @@ func (exc *StackExchange) publish(channel string, msg *protos.ServerMessage) err
 		return err
 	}
 
-	//return exc.redisClient.Publish(context.Background(), channel, data).Err()
+	// return exc.redisClient.Publish(context.Background(), channel, data).Err()
 	return exc.publishCommand(exc.getChannel(channel), data)
 }
 
@@ -507,7 +502,7 @@ func (exc *StackExchange) AskServer(ctx context.Context, channel string, msg pro
 	}
 	defer subConn.Close()
 
-	//chan receive message nats
+	// chan receive message nats
 	msgChan := make(chan *nats.Msg, 1)
 	defer close(msgChan)
 
@@ -531,7 +526,7 @@ func (exc *StackExchange) AskServer(ctx context.Context, channel string, msg pro
 	return
 }
 
-//func (exc *StackExchange) serverPubSub(namespaces wolfsocket.Namespaces) {
+// func (exc *StackExchange) serverPubSub(namespaces wolfsocket.Namespaces) {
 //	ch := make(chan *nats.Msg, 100)
 //	subConn, err := exc.opts.Connect()
 //	if err != nil {
@@ -567,7 +562,7 @@ func (exc *StackExchange) AskServer(ctx context.Context, channel string, msg pro
 //		//}
 //	}
 //
-//}
+// }
 
 func (exc *StackExchange) ctx() context.Context {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
