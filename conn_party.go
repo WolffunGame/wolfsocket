@@ -118,8 +118,13 @@ func (ns *NSConn) replyPartyReplyInvitation(msg Message) {
 	}
 
 	//and ask join this party
-	msgJoin := msg
-	msgJoin.Event = OnPartyJoin
+	msgJoin, err := ns.Party.JoinMsg(msg)
+	if err != nil {
+		msg.Err = err
+		ns.Conn.Write(msg)
+		return
+	}
+	
 	err = ns.AskPartyJoin(msgJoin)
 	if err != nil {
 		msg.Err = err
