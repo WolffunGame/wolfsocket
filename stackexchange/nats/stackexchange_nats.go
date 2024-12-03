@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"strings"
 	"sync"
 	"time"
 	"wolfsocket/metrics"
 	"wolfsocket/stackexchange/protos"
+
+	"github.com/golang/protobuf/proto"
 
 	"wolfsocket"
 
@@ -226,7 +227,7 @@ func (exc *StackExchange) run() {
 				}
 
 				subject := exc.getChannel(m.channel)
-				// wolfsocket.Debugf("[%s] unsubscribed from [%s]", subject)
+				wolfsocket.Debugf("[%s] unsubscribed from [%s]", m.conn.ID(), subject)
 				if sub.subscriptions == nil {
 					continue
 				}
