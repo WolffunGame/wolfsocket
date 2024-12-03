@@ -5,7 +5,10 @@ import (
 	"wolfsocket/wserror"
 )
 
-var forcedJoin = false
+var (
+	forcedJoin      = false
+	AutoCreateParty = false
+)
 
 // Forced to join a new group when already in another group
 func SetForcedJoin(isForced bool) {
@@ -56,12 +59,12 @@ func (ns *NSConn) AskPartyCreate(msg Message) error {
 	}
 
 	ns.Party.Create(ns)
-	ns.replyJoined()
+	ns.ReplyJoined()
 	return nil
 }
 
 func (ns *NSConn) AskPartyInvite(msg Message) {
-	if ns.Party == nil {
+	if ns.Party == nil && AutoCreateParty {
 		msgCreate := msg
 		msgCreate.Event = OnPartyCreate
 		err := ns.AskPartyCreate(msgCreate)
@@ -177,7 +180,7 @@ func (ns *NSConn) AskPartyJoin(msg Message) error {
 		ns.Party.Join(ns, nil)
 	}
 
-	ns.replyJoined()
+	ns.ReplyJoined()
 	return nil
 }
 
@@ -234,7 +237,7 @@ func (ns *NSConn) ReplyLeft() {
 	ns.Conn.Write(msg)              //send back remote side msg OnPartyLeft
 }
 
-func (ns *NSConn) replyJoined() {
+func (ns *NSConn) ReplyJoined() {
 	partyInfo := ns.Party.PartyInfo()
 	if len(partyInfo) == 0 {
 		partyInfo = []byte(ns.Party.PartyID())
