@@ -23,7 +23,6 @@ type Party interface {
 	Unsubscribe()
 
 	PartyInfo() []byte
-	JoinMsg(Message) (Message, error)
 }
 
 var _ Party = &BaseParty{}
@@ -113,11 +112,6 @@ func (p *BaseParty) Leave() error {
 	p.nsConn = nil
 
 	return nil
-}
-
-func (p *BaseParty) JoinMsg(msgInvite Message) (Message, error) {
-	msgInvite.Event = OnPartyJoin
-	return msgInvite, nil
 }
 
 func (p *BaseParty) PartyInfo() []byte {
