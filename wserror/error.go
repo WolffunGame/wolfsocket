@@ -1,6 +1,7 @@
 package wserror
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 )
@@ -26,7 +27,8 @@ func New(code ErrorCode, msg string) WSError {
 }
 
 func Error(err error) WSError {
-	if wsErr, ok := err.(WSError); ok {
+	var wsErr WSError
+	if errors.As(err, &wsErr) {
 		return wsErr
 	}
 	return WSError{DefaultErr, err.Error()}
